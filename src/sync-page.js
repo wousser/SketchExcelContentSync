@@ -55,7 +55,7 @@ export function syncCurrentPage(context) {
   //check filetype
   var fileType = contentFile.split(".").pop()
 
-  switch(fileType) {
+  switch(fileType.toLowerCase()) {
     case "csv":
       console.log("csv")
       loadCSVData(contentFile)
