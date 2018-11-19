@@ -1,0 +1,53 @@
+{
+  "name": "Excel Content Sync",
+  "description": "Sync multi-language content from Excel to Sketch",
+  "author": "Wouter Bron",
+  "homepage": "https://github.com/wousser/excelContentSync",
+  "compatibleVersion": 3,
+  "bundleVersion": 1,
+  "icon": "icon.png",
+  "commands": [
+    {
+      "name": "Sync Current Page...",
+      "description": "Sync content from a Excel document to this page.",
+      "identifier": "sync-current-page",
+      "script": "sync-page.js",
+      "handler": "syncCurrentPage"
+    },
+    {
+      "name": "Sync All Pages...",
+      "description": "Sync content from a Excel document to all pages (except Symbols).",
+      "identifier": "sync-all-pages",
+      "script": "sync-page.js",
+      "handler": "syncAllPages"
+    },
+    {
+      "name": "Generate Content File (Excel)",
+      "description": "Generate a Excel document with keys and values from the current Sketch document.",
+      "identifier": "generate-content-file",
+      "script": "generate-content-file.js"
+    },
+    {
+      "name": "Report Issue or Feedback",
+      "description": "Report Issue, Feedback or Feature on Github.",
+      "identifier": "open-feedback",
+      "script": "open-url.js",
+      "handler": "openFeedback"
+    }
+  ],
+  "menu": {
+    "title": "Excel Content Sync",
+    "items": [
+      "sync-current-page",
+      "sync-all-pages",
+      "-",
+      "generate-content-file",
+      "-",
+      "open-feedback"
+    ]
+  },
+  "version": "0.1.0",
+  "identifier": "Excel Content Sync",
+  "disableCocoaScriptPreprocessor": true,
+  "appcast": "https://raw.githubusercontent.com//master/.appcast.xml"
+}
