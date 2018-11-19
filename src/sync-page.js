@@ -1,6 +1,7 @@
 import sketch from 'sketch'
 import fs from '@skpm/fs'
 import dialog from '@skpm/dialog'
+const constants = require('./constants.js')
 const UI = require('sketch/ui')
 const path = require('path')
 const csv = require('csvtojson')
@@ -31,6 +32,7 @@ export function syncAllPages(context) {
 
 export function syncCurrentPage(context) {
   console.log("syncCurrentPage")
+
   //check if default file exist or ask for file input
   if (fs.existsSync(contentFile)) {
     console.log("file exists: " + contentFile);
@@ -207,7 +209,7 @@ function updateSymbolLayer(symbol) {
 
   for (let override of symbol.overrides) {
     if (override.property == "stringValue") {
-      let layerNameAndOverride = symbol.name + '/' + layerNamesFromPath(override.path)
+      let layerNameAndOverride = symbol.name + constants.excelDivider + layerNamesFromPath(override.path)
 
       if (contentDictionary[layerNameAndOverride]) {
         override.value = contentDictionary[layerNameAndOverride]
@@ -240,11 +242,11 @@ function updateArtboardLayer(artboard) {
 
 function layerNamesFromPath(path) {
     var layerNames = []
-    let layerIDs = path.split("/")
+    let layerIDs = path.split(constants.sketchSymbolDivider)
     for (let layerID of layerIDs) {
       let layer = document.getLayerWithID(layerID)
       let layerName = layer.name
       layerNames.push(layerName)
     }
-    return layerNames.join('/')
+    return layerNames.join(constants.excelDivider)
 }

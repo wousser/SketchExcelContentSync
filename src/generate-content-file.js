@@ -1,6 +1,7 @@
 import sketch from 'sketch'
 import fs from '@skpm/fs'
 import dialog from '@skpm/dialog'
+const constants = require('./constants.js')
 const path = require('path')
 const XLSX = require('xlsx')
 
@@ -21,6 +22,8 @@ var duplicateKeys = 0
 // generatedFileData.push(excelHeader)
 
 export default function() {
+console.log("excelDivider", excelDivider)
+console.log("sketchSymbolDivider", sketchSymbolDivider)
 
   if (document.pages) {
 
@@ -43,13 +46,13 @@ export default function() {
 
 function layerNamesFromPath(path) {
     var layerNames = []
-    let layerIDs = path.split("/")
+    let layerIDs = path.split(constants.sketchSymbolDivider)
     for (let layerID of layerIDs) {
       let layer = document.getLayerWithID(layerID)
       let layerName = layer.name
       layerNames.push(layerName)
     }
-    return layerNames.join('/')
+    return layerNames.join(constants.excelDivider)
 }
 
 function getLayers(layer) {
@@ -76,23 +79,13 @@ function getLayers(layer) {
           console.log("stringValue affectedLayer: ")
           console.log(override.id)
           console.log(override.path)
+          console.log(layer.name)
 
-          // let layerIDs = override.id.split("/")
+          console.log(layerNamesFromPath(override.path))
 
-          // let symbol = document.getLayerWithID(symbolID)
-          // var key = layer.name
-          // if (symbol) {
-          //   console.log(symbol.name)
-          //   key = key + "/" + symbol.name
-          // }
-          let key = layer.name + "/" + layerNamesFromPath(override.path)
+          let key = layer.name + constants.excelDivider + layerNamesFromPath(override.path)
           addToSheet(key, override.value)
         }
-        // if (override.property == "symbolID") {
-        //   // console.log("symbolID affectedLayer: ")
-        //   // console.log(override.affectedLayer)
-        //   // addToSheet(layer.name + "." + override.affectedLayer.name, override.value)
-        // }
       }
     }
   }
