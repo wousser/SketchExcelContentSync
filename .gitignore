@@ -3,6 +3,7 @@ excelContentSync.sketchplugin
 
 # npm
 node_modules
+package-lock.json
 .npm
 npm-debug.log
 
@@ -11,3 +12,8 @@ npm-debug.log
 
 # WebStorm
 .idea
+
+# logs
+logs
+*.log
+npm-debug.log*
