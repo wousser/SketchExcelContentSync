@@ -1,0 +1,31 @@
+{
+  "name": "excel-content-sync",
+  "version": "0.1.0",
+  "engines": {
+    "sketch": ">=3.0"
+  },
+  "skpm": {
+    "name": "Excel Content Sync",
+    "manifest": "src/manifest.json",
+    "main": "excelContentSync.sketchplugin",
+    "assets": [
+      "assets/**/*"
+    ]
+  },
+  "scripts": {
+    "build": "skpm-build",
+    "watch": "skpm-build --watch",
+    "start": "skpm-build --watch --run",
+    "postinstall": "npm run build && skpm-link"
+  },
+  "devDependencies": {
+    "@skpm/builder": "^0.5.2"
+  },
+  "author": "Wouter Bron <wousser@gmail.com>",
+  "dependencies": {
+    "@skpm/dialog": "^0.2.4",
+    "@skpm/fs": "^0.2.2",
+    "csvtojson": "^2.0.8",
+    "xlsx": "^0.14.0"
+  }
+}
