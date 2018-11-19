@@ -16,6 +16,7 @@ const defaultContentFileXLSX = path.join(directory, "content.xlsx")
 
 var contentDictionary = {}
 var languageOptions = []
+var selectedLanguage
 
 var contentFile
 if (fs.existsSync(defaultContentFileXLSX)) {
@@ -23,8 +24,6 @@ if (fs.existsSync(defaultContentFileXLSX)) {
 } else if (fs.existsSync(defaultContentFileCSV)) {
   contentFile = defaultContentFileCSV
 }
-
-var selectedLanguage
 
 export function syncAllPages(context) {
   console.log("syncAllPages")
@@ -63,7 +62,6 @@ export function syncCurrentPage(context) {
       break
     case "xls", "xlsx":
       console.log("Excel")
-      getLanguageOptions(contentFile)
       loadExcelData(contentFile)
       populatePage()
       break
@@ -73,30 +71,6 @@ export function syncCurrentPage(context) {
   }
 }
 
-function getLanguageOptions(contentFile) {
-  const xlsData = fs.readFileSync(contentFile)
-  let workbook = XLSX.read(xlsData, {type: "buffer", sheetRows: 1}) //
-   /* Get worksheet. Only support one sheet at the moment. */
-   let first_sheet_name = workbook.SheetNames[0]
-   let worksheet = workbook.Sheets[first_sheet_name]
-   let sheetData = XLSX.utils.sheet_to_json(worksheet, {
-        header: 1,
-   })
-
-   // var languageOptions = []
-   if (sheetData[0]) {
-     for (let language of sheetData[0]) {
-       languageOptions.push(language)
-     }
-     //remove 'key' from language list
-     languageOptions.shift()
-     showLanguageSelectionPopup(languageOptions)
-   } else {
-     console.log("File format not supported.")
-     sketch.UI.message("File format not supported.")
-   }
-}
-
 function showLanguageSelectionPopup(languageOptions) {
   var selection = UI.getSelectionFromUser(
     "Language?",
@@ -104,11 +78,11 @@ function showLanguageSelectionPopup(languageOptions) {
   )
 
   var ok = selection[2]
-  selectedLanguage = languageOptions[selection[1]]
   if (ok) {
+    selectedLanguage = languageOptions[selection[1]]
     console.log(selectedLanguage)
   } else {
-    console.log("break")
+    console.log("showLanguageSelectionPopup() pressed cancel.")
     return
   }
 }
@@ -124,9 +98,27 @@ function loadExcelData(contentFile) {
   var excelJson = XLSX.utils.sheet_to_json(worksheet)
 
   let rowNumber = 2 //Excel row starts at 0, and 1st row is key/value
-  console.log(excelJson[0])
-  for (var row in excelJson) {
 
+  //get language options
+  var keyAndLanguageOptions = Object.keys(excelJson[0]) //get language options from first row
+  if (!keyAndLanguageOptions) {
+    console.log("File format not supported. Language options not found")
+    sketch.UI.message("File format not supported. Language options not found")
+    return
+  }
+  keyAndLanguageOptions.shift() //remove 'key'
+  for (let language of keyAndLanguageOptions) {
+    languageOptions.push(language)
+  }
+
+  //ask for language first so we don't load all language data into the object.
+  showLanguageSelectionPopup(languageOptions)
+  if (!selectedLanguage) {
+    console.log("loadExcelData() aborted. No language selected.")
+    return
+  }
+
+  for (var row in excelJson) {
         //skip empty content
         if (excelJson[row][selectedLanguage]) {
           console.log("rowNumber: " + rowNumber)
@@ -140,6 +132,12 @@ function loadExcelData(contentFile) {
 }
 
 function populatePage(page) {
+  //abort if no language is chosen
+  if (!selectedLanguage) {
+    console.log("populatePage() aborted. No language selected.")
+    return
+  }
+
   // Use selected page if no page is set
   if (!page) {
     page = document.selectedPage
@@ -162,39 +160,9 @@ function populatePage(page) {
         break
     }
   }
+  context.document.reloadInspector()
+  onComplete()
 }
-
-/*
-function updateContent(key, content) {
-  console.log("updateContent: " + key, content)
-  var keyFirstPart = key.split("/")[0]
-  var layers = document.getLayersNamed(keyFirstPart)
-  if (layers.length) {
-    console.log("found layer match")
-
-    for (let layer of layers) {
-      //check for current page
-      var parentPage = getParentPage(layer)
-
-      if (parentPage.name == page.name) {
-        console.log("Layer is on current page")
-        // console.log(layer.type)
-        if (layer.type === String(sketch.Types.SymbolInstance)) {
-          updateSymbol(layer, key, content)
-        }
-
-        if (layer.type === String(sketch.Types.Text)) {
-          console.log("Text layer")
-          layer.text = content
-        }
-
-      } else {
-        // console.log("Layer not on current page")
-      }
-    }
-  }
-}
-*/
 
 //Load CSV File
 function loadCSVData(contentFile) {
@@ -213,13 +181,12 @@ function loadCSVData(contentFile) {
 }, onError, onComplete)
 }
 
-function onError (err) {
+function onError(err) {
     console.log("Error: " + err)
     sketch.UI.message("An error occured: " + err)
 }
 
-function onComplete () {
-  context.document.reloadInspector();
+function onComplete() {
   console.log("Completed")
   sketch.UI.message("Completed")
 }
@@ -271,15 +238,6 @@ function updateArtboardLayer(artboard) {
 //   Helper methods
 // **********************
 
-// function getParentPage(layer) {
-//   var parent = layer.parent
-//      if (parent.type === String(sketch.Types.Page)) {
-//        return parent
-//      } else {
-//        return getParentPage(parent)
-//      }
-// }
-
 function layerNamesFromPath(path) {
     var layerNames = []
     let layerIDs = path.split("/")
@@ -290,13 +248,3 @@ function layerNamesFromPath(path) {
     }
     return layerNames.join('/')
 }
-
-// function getLanguageFromPageName(pageName) {
-//   var regex = /.*\[(.*)\]/g
-//   return firstRegexMatch(regex, pageName)
-// }
-//
-// function firstRegexMatch(regex, string) {
-//   var matches = regex.exec(string)
-//   return (matches && matches.length > 1) ? matches[1] : null
-// }
