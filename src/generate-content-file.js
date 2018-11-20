@@ -1,7 +1,8 @@
 import sketch from 'sketch'
 import fs from '@skpm/fs'
 import dialog from '@skpm/dialog'
-const constants = require('./constants.js')
+const utilities = require('./utilities')
+const constants = require('./constants')
 const path = require('path')
 const XLSX = require('xlsx')
 
@@ -22,8 +23,6 @@ var duplicateKeys = 0
 // generatedFileData.push(excelHeader)
 
 export default function() {
-console.log("excelDivider", excelDivider)
-console.log("sketchSymbolDivider", sketchSymbolDivider)
 
   if (document.pages) {
 
@@ -42,17 +41,6 @@ console.log("sketchSymbolDivider", sketchSymbolDivider)
   } else {
     console.log("Document contains no pages")
   }
-}
-
-function layerNamesFromPath(path) {
-    var layerNames = []
-    let layerIDs = path.split(constants.sketchSymbolDivider)
-    for (let layerID of layerIDs) {
-      let layer = document.getLayerWithID(layerID)
-      let layerName = layer.name
-      layerNames.push(layerName)
-    }
-    return layerNames.join(constants.excelDivider)
 }
 
 function getLayers(layer) {
@@ -138,4 +126,25 @@ function saveToFile() {
 function onComplete() {
   console.log("Completed")
   sketch.UI.message("Completed. Duplicates: " + duplicateKeys + " File saved as .xlsx")
+}
+
+// **********************
+//   Helper methods
+// **********************
+//TODO: function duplicated
+function layerNamesFromPath(path) {
+
+    var layerNames = []
+    let layerIDs = path.split(constants.sketchSymbolDivider)
+    for (let layerID of layerIDs) {
+
+      let layer = document.getLayerWithID(layerID)
+
+      //TODO: Sketch libraries not supported yet.
+      if (layer) {
+        let layerName = layer.name
+        layerNames.push(layerName)
+      }
+    }
+    return layerNames.join(constants.excelDivider)
 }

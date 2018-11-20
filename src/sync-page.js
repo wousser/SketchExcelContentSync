@@ -1,7 +1,7 @@
 import sketch from 'sketch'
 import fs from '@skpm/fs'
 import dialog from '@skpm/dialog'
-const constants = require('./constants.js')
+const constants = require('./constants')
 const UI = require('sketch/ui')
 const path = require('path')
 const csv = require('csvtojson')
@@ -239,14 +239,20 @@ function updateArtboardLayer(artboard) {
 // **********************
 //   Helper methods
 // **********************
-
+//TODO: function duplicated
 function layerNamesFromPath(path) {
+
     var layerNames = []
     let layerIDs = path.split(constants.sketchSymbolDivider)
     for (let layerID of layerIDs) {
+
       let layer = document.getLayerWithID(layerID)
-      let layerName = layer.name
-      layerNames.push(layerName)
+
+      //TODO: Sketch libraries not supported yet.
+      if (layer) {
+        let layerName = layer.name
+        layerNames.push(layerName)
+      }
     }
     return layerNames.join(constants.excelDivider)
 }
