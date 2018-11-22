@@ -4,7 +4,7 @@ import dialog from '@skpm/dialog'
 const constants = require('./constants')
 const UI = require('sketch/ui')
 const path = require('path')
-const csv = require('csvtojson')
+// const csv = require('csvtojson')
 const XLSX = require('xlsx')
 
 // documentation: https://developer.sketchapp.com/reference/api/
@@ -60,9 +60,10 @@ export function syncCurrentPage (context) {
   switch (fileType.toLowerCase()) {
     case 'csv':
       console.log('csv')
-      loadCSVData(contentFile)
+      // loadCSVData(contentFile)
       populatePage()
       break
+    // eslint-disable-next-line no-sequences
     case 'xls', 'xlsx':
       console.log('Excel')
       loadExcelData(contentFile)
@@ -74,9 +75,9 @@ export function syncCurrentPage (context) {
   }
 }
 
-function showLanguageSelectionPopup(languageOptions) {
+function showLanguageSelectionPopup (languageOptions) {
   var selection = UI.getSelectionFromUser(
-    "Language?",
+    'Language?',
     languageOptions
   )
 
@@ -85,8 +86,7 @@ function showLanguageSelectionPopup(languageOptions) {
     selectedLanguage = languageOptions[selection[1]]
     console.log(selectedLanguage)
   } else {
-    console.log("showLanguageSelectionPopup() pressed cancel.")
-    
+    console.log('showLanguageSelectionPopup() pressed cancel.')
   }
 }
 
@@ -97,8 +97,8 @@ function loadExcelData (contentFile) {
     type: 'buffer'
   })
   /* Get worksheet. Only support one sheet at the moment. */
-  var first_sheet_name = workbook.SheetNames[0]
-  var worksheet = workbook.Sheets[first_sheet_name]
+  var firstSheetName = workbook.SheetNames[0]
+  var worksheet = workbook.Sheets[firstSheetName]
 
   var excelJson = XLSX.utils.sheet_to_json(worksheet)
 
@@ -165,11 +165,12 @@ function populatePage (page) {
         break
     }
   }
-  context.document.reloadInspector()
+  document.reloadInspector()
   onComplete()
 }
 
 // Load CSV File
+/*
 function loadCSVData (contentFile) {
   const csvData = fs.readFileSync(contentFile)
 
@@ -184,11 +185,7 @@ function loadCSVData (contentFile) {
       updateContent(json['key'], json[selectedLanguage])
     }, onError, onComplete)
 }
-
-function onError (err) {
-  console.log('Error: ' + err)
-  sketch.UI.message('An error occured: ' + err)
-}
+*/
 
 function onComplete () {
   console.log('Completed')
@@ -210,7 +207,7 @@ function updateSymbolLayer (symbol) {
   // console.log(symbol)
 
   for (let override of symbol.overrides) {
-    if (override.property == 'stringValue') {
+    if (override.property === 'stringValue') {
       let layerNameAndOverride = symbol.name + constants.excelDivider + layerNamesFromPath(override.path)
 
       if (contentDictionary[layerNameAndOverride]) {
