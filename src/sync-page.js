@@ -50,42 +50,66 @@ export function selectContentDocument (context) {
   }
 }
 
+function loadData (contentFile) {
+  // check filetype
+  let fileType = path.extname(contentFile)
+  switch (fileType.toLowerCase()) {
+    case '.csv':
+      console.log('csv')
+      // loadCSVData(contentFile)
+      break
+    // eslint-disable-next-line no-sequences
+    case '.xls', '.xlsx':
+      console.log('Excel')
+      loadExcelData(contentFile)
+      break
+    default:
+      console.log('File format not supported.')
+      sketch.UI.message('File format not supported.')
+  }
+}
+
 export function syncAllPages (context) {
   console.log('syncAllPages')
+  if (contentDocumentExists && document.pages) {
+    var contentFile = Settings.documentSettingForKey(document, 'excelTranslateContentFile')
+    loadData(contentFile)
+    for (let page of document.pages) {
+      // Don't add symbols page
+      if (page.name !== 'Symbols') {
+        populatePage(page)
+      }
+    }
+    context.document.reloadInspector()
+  } else {
+    console.log('Document contains no pages, or content document does not exist.')
+    sketch.UI.message('Document contains no pages, or content document does not exist.')
+  }
 }
 
 export function syncCurrentPage (context) {
   console.log('syncCurrentPage')
+  if (contentDocumentExists) {
+    var contentFile = Settings.documentSettingForKey(document, 'excelTranslateContentFile')
+    loadData(contentFile)
+    populatePage()
+    context.document.reloadInspector()
+  }
+}
 
-  // check if default file exist or ask for file input
+function contentDocumentExists () {
   var contentFile = Settings.documentSettingForKey(document, 'excelTranslateContentFile')
   console.log('contentFile', contentFile)
+
   if (contentFile) {
     if (fs.existsSync(contentFile)) {
       console.log('file exists: ', contentFile)
-
-      // check filetype
-      let fileType = path.extname(contentFile)
-      switch (fileType.toLowerCase()) {
-        case '.csv':
-          console.log('csv')
-          // loadCSVData(contentFile)
-          populatePage()
-          break
-        // eslint-disable-next-line no-sequences
-        case '.xls', '.xlsx':
-          console.log('Excel')
-          loadExcelData(contentFile)
-          populatePage()
-          break
-        default:
-          console.log('File format not supported.')
-          sketch.UI.message('File format not supported.')
-      }
+      return true
     }
   } else {
     console.log('No content file.')
     sketch.UI.message('Select a content document first.')
+    return false
   }
 }
 
@@ -179,7 +203,6 @@ function populatePage (page) {
         break
     }
   }
-  document.reloadInspector()
   onComplete()
 }
 

@@ -29,7 +29,7 @@
       "handler": "syncAllPages"
     },
     {
-      "name": "Generate Content File (Excel)",
+      "name": "Generate Content Document...",
       "description": "Generate a Excel document with keys and values from the current Sketch document.",
       "identifier": "generate-content-file",
       "script": "./generate-content-file.js"
