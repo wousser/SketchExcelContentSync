@@ -88,15 +88,14 @@ function contentFromSymbolLayer (symbol) {
       console.log(layerNamesFromPath(override.path))
 
       let key = symbol.name + constants.excelDivider + layerNamesFromPath(override.path)
-      let sketchID = path.join(symbol.id, override.path)
-      addToSheet(sketchID, key, override.value)
+      addToSheet(key, override.value)
     }
   }
 }
 
 function contentFromTextLayer (layer) {
   console.log('contentFromTextLayer')
-  addToSheet(layer.id, layer.name, layer.text)
+  addToSheet(layer.name, layer.text)
 }
 
 function contentFromArtboardLayer (artboard) {
@@ -115,71 +114,32 @@ function contentFromArtboardLayer (artboard) {
   }
 }
 
-/*
-function getLayers(layer) {
-  if (layer.layers) {
-    // console.log("still has layers")
-    for (let layer of layer.layers) {
-      getLayers(layer)
-    }
-  } else {
-    // console.log("No more layers " + layer.name, layer.type )
-    if (layer.type === String(sketch.Types.Text)) {
-      // console.log("Text layer")
-      addToSheet(layer.name, layer.text)
-    }
-
-    if (layer.type === String(sketch.Types.SymbolInstance)) {
-      console.log("SymbolInstance layer")
-      console.log(layer.name)
-      // console.log(layer)
-      for (let override of layer.overrides) {
-        // console.log("override:")
-        // console.log(override)
-        if (override.property == "stringValue") {
-          console.log("stringValue affectedLayer: ")
-          console.log(override.id)
-          console.log(override.path)
-          console.log(layer.name)
-
-          console.log(layerNamesFromPath(override.path))
-
-          let key = layer.name + constants.excelDivider + layerNamesFromPath(override.path)
-          addToSheet(key, override.value)
-        }
-      }
-    }
-  }
-}
-*/
-
-function ExcelContent (sketchID, key, value) {
-  this.sketchID = sketchID
+function ExcelContent (key, value) {
   this.key = key
   this.value = value
 }
 
-function addToSheet (sketchID, key, value) {
+function addToSheet (key, value) {
   // check if key already exists
-  if (generatedFileData.filter(excelContent => (excelContent.sketchID === sketchID)).length) {
+  if (generatedFileData.filter(excelContent => (excelContent.key === key)).length) {
     // skip
     duplicateKeys += 1
   } else {
     // add to array
-    let keyValue = new ExcelContent(sketchID, key, value)
+    let keyValue = new ExcelContent(key, value)
     generatedFileData.push(keyValue)
   }
-  console.log('Adding to sheet: ' + sketchID, key, value)
+  console.log('Adding to sheet: ' + key, value)
 }
 
 function saveToFile () {
   var date = new Date()
   var dateFormat = date.getFullYear() + '' + (date.getMonth() + 1) + '' + date.getDate()
 
-  let name = path.basename(document.path, '.sketch')
+  let name = decodeURI(path.basename(document.path, '.sketch'))
   let contentFileName = name + '-content-' + dateFormat + '.xlsx'
   var defaultPath = path.join(path.dirname(document.path), contentFileName)
-
+  console.log(defaultPath)
   var filePath = dialog.showSaveDialog({
     filters: [
       { name: 'Excel', extensions: ['xlsx'] }
@@ -197,13 +157,11 @@ function saveToFile () {
     const content = XLSX.write(book, { type: 'buffer', bookType: 'xlsx', bookSST: false })
     fs.writeFileSync(filePath, content, { encoding: 'binary' })
     console.log('File created as:', filePath)
-    onComplete()
-  }
-}
 
-function onComplete () {
-  console.log('Completed')
-  sketch.UI.message('Completed. Duplicates: ' + duplicateKeys + ' File saved as .xlsx')
+    // done
+    console.log('Completed. Duplicates: ' + duplicateKeys + ' File saved as ' + path.basename(filePath))
+    sketch.UI.message('Completed. Duplicates: ' + duplicateKeys + ' File saved as ' + decodeURI(path.basename(filePath)))
+  }
 }
 
 // **********************
