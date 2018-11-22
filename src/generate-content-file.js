@@ -114,9 +114,11 @@ function contentFromArtboardLayer (artboard) {
   }
 }
 
-function ExcelContent (key, value) {
-  this.key = key
-  this.value = value
+class ExcelContent {
+  constructor (key, value) {
+    this.key = key
+    this.value = value
+  }
 }
 
 function addToSheet (key, value) {
