@@ -8,6 +8,13 @@
   "icon": "icon.png",
   "commands": [
     {
+      "name": "Select Content Document...",
+      "description": "Select the Excel or CSV file that contains the content.",
+      "identifier": "select-content-document",
+      "script": "./sync-page.js",
+      "handler": "selectContentDocument"
+    },
+    {
       "name": "Sync Current Page...",
       "description": "Sync content from a Excel document to this page.",
       "identifier": "sync-current-page",
@@ -41,6 +48,7 @@
       "sync-current-page",
       "sync-all-pages",
       "-",
+      "select-content-document",
       "generate-content-file",
       "-",
       "open-feedback"

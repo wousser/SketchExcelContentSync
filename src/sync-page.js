@@ -1,29 +1,53 @@
 import sketch from 'sketch'
 import fs from '@skpm/fs'
 import dialog from '@skpm/dialog'
-const constants = require('./constants')
-const UI = require('sketch/ui')
-const path = require('path')
-// const csv = require('csvtojson')
-const XLSX = require('xlsx')
+var constants = require('./constants')
+var UI = require('sketch/ui')
+var path = require('path')
+var Settings = require('sketch/settings')
+// var csv = require('csvtojson')
+var XLSX = require('xlsx')
 
 // documentation: https://developer.sketchapp.com/reference/api/
 // Based on: https://github.com/DWilliames/Google-sheets-content-sync-sketch-plugin/blob/master/Google%20sheets%20content%20sync.sketchplugin/Contents/Sketch/main.js
 
-const document = sketch.getSelectedDocument()
-const directory = path.dirname(document.path)
-const defaultContentFileCSV = path.join(directory, 'content.csv')
-const defaultContentFileXLSX = path.join(directory, 'content.xlsx')
+var document = sketch.getSelectedDocument()
+// const directory = path.dirname(document.path)
+// const defaultContentFileCSV = path.join(directory, 'content.csv')
+// const defaultContentFileXLSX = path.join(directory, 'content.xlsx')
 
 var contentDictionary = {}
 var languageOptions = []
 var selectedLanguage
 
-var contentFile
-if (fs.existsSync(defaultContentFileXLSX)) {
-  contentFile = defaultContentFileXLSX
-} else if (fs.existsSync(defaultContentFileCSV)) {
-  contentFile = defaultContentFileCSV
+// var contentFile
+// if (fs.existsSync(defaultContentFileXLSX)) {
+//   contentFile = defaultContentFileXLSX
+// } else if (fs.existsSync(defaultContentFileCSV)) {
+//   contentFile = defaultContentFileCSV
+// }
+
+export function selectContentDocument (context) {
+  console.log('selectContentDocument')
+  var filePaths = dialog.showOpenDialog({
+    properties: ['openFile'],
+    defaultPath: 'directory',
+    filters: [{
+      name: 'Excel or CSV',
+      extensions: ['xlsx', 'xls', 'csv']
+    }]
+  })
+  if (filePaths.length) {
+    var contentFile = filePaths[0]
+    console.log('set contentFile: ', contentFile)
+    // set as document key
+    Settings.setDocumentSettingForKey(document, 'excelTranslateContentFile', contentFile)
+    console.log('DocumentKey: ', Settings.documentSettingForKey(document, 'excelTranslateContentFile'))
+    sketch.UI.message('Content Document Set! Now you can translate the current page or all pages.')
+  } else {
+    console.log('no file selected')
+    sketch.UI.message('No file selected. Select Excel or CSV file to continue. Generate a file if you don\'t have one.')
+  }
 }
 
 export function syncAllPages (context) {
@@ -34,44 +58,34 @@ export function syncCurrentPage (context) {
   console.log('syncCurrentPage')
 
   // check if default file exist or ask for file input
-  if (fs.existsSync(contentFile)) {
-    console.log('file exists: ' + contentFile)
-  } else {
-    console.log('showOpenDialog')
-    var filePaths = dialog.showOpenDialog({
-      properties: ['openFile'],
-      defaultPath: 'directory',
-      filters: [{
-        name: 'Excel or CSV',
-        extensions: ['xlsx', 'csv']
-      }]
-    })
-    if (filePaths.length) {
-      contentFile = filePaths[0]
-    } else {
-      console.log('no file selected')
-      sketch.UI.message('No file selected. Select an Excel or CSV file to continue.')
+  var contentFile = Settings.documentSettingForKey(document, 'excelTranslateContentFile')
+  console.log('contentFile', contentFile)
+  if (contentFile) {
+    if (fs.existsSync(contentFile)) {
+      console.log('file exists: ', contentFile)
+
+      // check filetype
+      let fileType = path.extname(contentFile)
+      switch (fileType.toLowerCase()) {
+        case '.csv':
+          console.log('csv')
+          // loadCSVData(contentFile)
+          populatePage()
+          break
+        // eslint-disable-next-line no-sequences
+        case '.xls', '.xlsx':
+          console.log('Excel')
+          loadExcelData(contentFile)
+          populatePage()
+          break
+        default:
+          console.log('File format not supported.')
+          sketch.UI.message('File format not supported.')
+      }
     }
-  }
-
-  // check filetype
-  var fileType = contentFile.split('.').pop()
-
-  switch (fileType.toLowerCase()) {
-    case 'csv':
-      console.log('csv')
-      // loadCSVData(contentFile)
-      populatePage()
-      break
-    // eslint-disable-next-line no-sequences
-    case 'xls', 'xlsx':
-      console.log('Excel')
-      loadExcelData(contentFile)
-      populatePage()
-      break
-    default:
-      console.log('File format not supported.')
-      sketch.UI.message('File format not supported.')
+  } else {
+    console.log('No content file.')
+    sketch.UI.message('Select a content document first.')
   }
 }
 
