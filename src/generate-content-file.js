@@ -10,17 +10,19 @@ const XLSX = require('xlsx')
 
 const document = sketch.getSelectedDocument()
 
-// const directory = path.dirname(document.path)
-
-// Excel header
+class ExcelContent {
+  constructor (key, value) {
+    this.key = key
+    this.value = value
+  }
+}
 var generatedFileData = []
-
 var duplicateKeys = 0
 
 export default function () {
   if (document.pages) {
     for (let page of document.pages) {
-      // Don't add symbols page
+      // Don't add Symbols page
       if (page.name !== 'Symbols') {
         getPageContent(page)
       }
@@ -37,55 +39,38 @@ function getPageContent (page) {
 
   for (let layer of page.layers) {
     // console.log(layer.name)
-    getLayers(layer)
+    getContent(layer)
   }
 }
 
-function getLayers (layer) {
-  if (layer.layers) {
-    // console.log("still has layers")
-    for (let indLayer of layer.layers) {
-      getLayers(indLayer)
-    }
-  } else {
-    console.log(layer.name, layer.type)
-    switch (layer.type) {
-      case String(sketch.Types.SymbolInstance):
-        contentFromSymbolLayer(layer)
-        break
-      case String(sketch.Types.Text):
-        contentFromTextLayer(layer)
-        break
-      case String(sketch.Types.Artboard):
-        contentFromArtboardLayer(layer)
-        console.log('artboard')
-        break
-    }
+function getContent (layer) {
+  switch (layer.type) {
+    case String(sketch.Types.SymbolInstance):
+      contentFromSymbolLayer(layer)
+      break
+    case String(sketch.Types.Text):
+      contentFromTextLayer(layer)
+      break
+    case String(sketch.Types.Artboard):
+      contentFromArtboardLayer(layer)
+      break
+    default:
+      // check for groups and combined layers
+      if (layer.layers) {
+        for (let individualLayer of layer.layers) {
+          getContent(individualLayer)
+        }
+      }
   }
 }
 
 function contentFromSymbolLayer (symbol) {
-  console.log('contentFromSymbolLayer')
-  // console.log(layer.name)
-  // console.log(layer)
+  console.log('contentFromSymbolLayer: ', symbol.name)
+
   for (let override of symbol.overrides) {
-    // console.log("override:")
-    // console.log(override)
     if (override.property === 'stringValue') {
-      console.log('stringValue')
-      console.log(symbol.id)
-      console.log(symbol.symbolId)
-      console.log(override.id)
-      // console.log(symbol.name)
-      // console.log(symbol)
-      console.log(override.id)
-      // console.log(override.path)
-
-      // if (symbol.id == 'F5DA5A57-72E6-4A02-8048-0827032405B7') {
-      //   console.log(symbol)
-      // }
-
-      console.log(layerNamesFromPath(override.path))
+      // console.log('stringValue')
+      console.log(symbol.id, override.id, override.path, symbol.name)
 
       let key = symbol.name + constants.excelDivider + layerNamesFromPath(override.path)
       addToSheet(key, override.value)
@@ -94,36 +79,27 @@ function contentFromSymbolLayer (symbol) {
 }
 
 function contentFromTextLayer (layer) {
-  console.log('contentFromTextLayer')
+  console.log('contentFromTextLayer: ', layer.name)
   addToSheet(layer.name, layer.text)
 }
 
 function contentFromArtboardLayer (artboard) {
-  console.log('contentFromArtboardLayer')
-  console.log('artboard layers: ' + artboard.layers.length)
-  for (let layer of artboard.layers) {
-    console.log(layer.name, layer.type)
-    switch (layer.type) {
-      case String(sketch.Types.SymbolInstance):
-        contentFromSymbolLayer(layer)
-        break
-      case String(sketch.Types.Text):
-        contentFromTextLayer(layer)
-        break
-    }
-  }
-}
+  console.log('contentFromArtboardLayer: ', artboard.name)
+  // add artboard market to sheet
+  let artboardDivider = 'ARTBOARD: ' + artboard.name
+  addToSheet('', '') // add empty row
+  addToSheet(artboardDivider, '')
 
-class ExcelContent {
-  constructor (key, value) {
-    this.key = key
-    this.value = value
+  // console.log('artboard layers: ' + artboard.layers.length)
+  for (let layer of artboard.layers) {
+    // console.log(layer.name, layer.type)
+    getContent(layer)
   }
 }
 
 function addToSheet (key, value) {
-  // check if key already exists
-  if (generatedFileData.filter(excelContent => (excelContent.key === key)).length) {
+  // check if key already exists, except for empty row
+  if (generatedFileData.filter(excelContent => (excelContent.key === key)).length && key !== '') {
     // skip
     duplicateKeys += 1
   } else {
@@ -131,7 +107,7 @@ function addToSheet (key, value) {
     let keyValue = new ExcelContent(key, value)
     generatedFileData.push(keyValue)
   }
-  console.log('Adding to sheet: ' + key, value)
+  // console.log('Adding to sheet: ' + key, value)
 }
 
 function saveToFile () {
@@ -162,7 +138,7 @@ function saveToFile () {
 
     // done
     console.log('Completed. Duplicates: ' + duplicateKeys + ' File saved as ' + path.basename(filePath))
-    sketch.UI.message('Completed. Duplicates: ' + duplicateKeys + ' File saved as ' + decodeURI(path.basename(filePath)))
+    sketch.UI.message('Content file generated. Found ' + duplicateKeys + ' duplicated keys. File saved as ' + decodeURI(path.basename(filePath)))
   }
 }
 
@@ -176,11 +152,12 @@ function layerNamesFromPath (path) {
   for (let layerID of layerIDs) {
     let layer = document.getLayerWithID(layerID)
 
-    // TODO: Sketch libraries not supported yet.
+    // TODO: Sketch libraries not supported.
     if (layer) {
       let layerName = layer.name
       layerNames.push(layerName)
     }
   }
+  // console.log(layerNames.join(constants.excelDivider))
   return layerNames.join(constants.excelDivider)
 }
