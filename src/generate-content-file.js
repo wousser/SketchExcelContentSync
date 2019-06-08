@@ -1,14 +1,16 @@
 import sketch from 'sketch'
 import fs from '@skpm/fs'
 import dialog from '@skpm/dialog'
-const constants = require('./constants')
-const path = require('path')
-const XLSX = require('xlsx')
+var UI = require('sketch/ui')
+var constants = require('./constants')
+var path = require('path')
+var XLSX = require('xlsx')
 
 // documentation: https://developer.sketchapp.com/reference/api/
 // Based on: https://github.com/DWilliames/Google-sheets-content-sync-sketch-plugin/blob/master/Google%20sheets%20content%20sync.sketchplugin/Contents/Sketch/main.js
 
-const document = sketch.getSelectedDocument()
+let document = sketch.getSelectedDocument()
+var contentLanguage = 'en-US' // set en-US as standard
 
 class ExcelContent {
   constructor (key, value) {
@@ -21,6 +23,8 @@ var duplicateKeys = 0
 
 export default function () {
   if (document.pages) {
+    // ask for language
+    askContentLanguage()
     for (let page of document.pages) {
       // Don't add Symbols page
       if (page.name !== 'Symbols') {
@@ -110,6 +114,29 @@ function addToSheet (key, value) {
   // console.log('Adding to sheet: ' + key, value)
 }
 
+function askContentLanguage () {
+  UI.getInputFromUser(
+    'Current language of the document?',
+    {
+      initialValue: 'en-US'
+    },
+    (err, value) => {
+      if (err) {
+        // most likely the user canceled the input
+        return
+      }
+      if (value !== 'null' && value.length > 1) {
+        console.log('set contentLanguage')
+        contentLanguage = value
+      }
+    }
+  )
+  // let userInput = UI.getInputFromUser('Content language?', 'en-US')
+  // if (userInput !== 'null' && userInput.length > 1) {
+  //   contentLanguage = userInput
+  // }
+}
+
 function saveToFile () {
   var date = new Date()
   var dateFormat = date.getFullYear() + '' + (date.getMonth() + 1) + '' + date.getDate()
@@ -127,12 +154,13 @@ function saveToFile () {
 
   // check if user want to save the file
   if (filePath) {
-    // console.log(generatedFileData)
-    const book = XLSX.utils.book_new()
-    const sheet = XLSX.utils.json_to_sheet(generatedFileData)
+    console.log(generatedFileData)
+    let book = XLSX.utils.book_new()
+    let sheet = XLSX.utils.json_to_sheet(generatedFileData)
+    sheet['B1'].v = contentLanguage
     XLSX.utils.book_append_sheet(book, sheet, 'content')
 
-    const content = XLSX.write(book, { type: 'buffer', bookType: 'xlsx', bookSST: false })
+    let content = XLSX.write(book, { type: 'buffer', bookType: 'xlsx', bookSST: false })
     fs.writeFileSync(filePath, content, { encoding: 'binary' })
     console.log('File created as:', filePath)
 

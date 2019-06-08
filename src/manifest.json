@@ -8,6 +8,13 @@
   "icon": "icon.png",
   "commands": [
     {
+      "name": "PanelTest",
+      "description": "",
+      "identifier": "panel-test",
+      "script": "./sync-page.js",
+      "handler": "panelTest"
+    },
+    {
       "name": "Select Content Document...",
       "description": "Select the Excel or CSV file that contains the content.",
       "identifier": "select-content-document",
@@ -45,6 +52,7 @@
   "menu": {
     "title": "Excel Content Sync",
     "items": [
+      "panel-test",
       "sync-current-page",
       "sync-all-pages",
       "-",

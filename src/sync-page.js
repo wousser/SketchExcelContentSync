@@ -1,6 +1,8 @@
 import sketch from 'sketch'
 import fs from '@skpm/fs'
 import dialog from '@skpm/dialog'
+import BrowserWindow from 'sketch-module-web-view'
+
 var constants = require('./constants')
 var UI = require('sketch/ui')
 var path = require('path')
@@ -12,9 +14,6 @@ var XLSX = require('xlsx')
 // Based on: https://github.com/DWilliames/Google-sheets-content-sync-sketch-plugin/blob/master/Google%20sheets%20content%20sync.sketchplugin/Contents/Sketch/main.js
 
 var document = sketch.getSelectedDocument()
-// const directory = path.dirname(document.path)
-// const defaultContentFileCSV = path.join(directory, 'content.csv')
-// const defaultContentFileXLSX = path.join(directory, 'content.xlsx')
 
 var contentDictionary = {}
 var languageOptions = []
@@ -26,6 +25,45 @@ var selectedLanguage
 // } else if (fs.existsSync(defaultContentFileCSV)) {
 //   contentFile = defaultContentFileCSV
 // }
+
+export function panelTest (context) {
+  console.log('panelTest4')
+
+  const options = {
+    identifier: 'unique.id'
+  }
+  const browserWindow = new BrowserWindow(options)
+  browserWindow.loadURL(require('./my-screen.html'))
+}
+
+export function syncCurrentPage (context) {
+  console.log('syncCurrentPage')
+  if (contentDocumentExists()) {
+    console.log('contentDocumentExists true')
+    var contentFile = Settings.documentSettingForKey(document, 'excelTranslateContentFile')
+    loadData(contentFile)
+    populatePage()
+    context.document.reloadInspector()
+  }
+}
+
+export function syncAllPages (context) {
+  console.log('syncAllPages')
+  if (contentDocumentExists() && document.pages) {
+    var contentFile = Settings.documentSettingForKey(document, 'excelTranslateContentFile')
+    loadData(contentFile)
+    for (let page of document.pages) {
+      // Don't add symbols page
+      if (page.name !== 'Symbols') {
+        populatePage(page)
+      }
+    }
+    context.document.reloadInspector()
+  } else {
+    console.log('Document contains no pages, or content document does not exist.')
+    sketch.UI.message('Document contains no pages, or content document does not exist.')
+  }
+}
 
 export function selectContentDocument (context) {
   console.log('selectContentDocument')
@@ -43,7 +81,7 @@ export function selectContentDocument (context) {
     // set as document key
     Settings.setDocumentSettingForKey(document, 'excelTranslateContentFile', contentFile)
     console.log('DocumentKey: ', Settings.documentSettingForKey(document, 'excelTranslateContentFile'))
-    sketch.UI.message('Content Document Set! Now you can translate the current page or all pages.')
+    sketch.UI.message('Content document set! Now you can translate the current page or all pages.')
   } else {
     console.log('no file selected')
     sketch.UI.message('No file selected. Select Excel or CSV file to continue. Generate a file if you don\'t have one.')
@@ -69,38 +107,9 @@ function loadData (contentFile) {
   }
 }
 
-export function syncAllPages (context) {
-  console.log('syncAllPages')
-  if (contentDocumentExists && document.pages) {
-    var contentFile = Settings.documentSettingForKey(document, 'excelTranslateContentFile')
-    loadData(contentFile)
-    for (let page of document.pages) {
-      // Don't add symbols page
-      if (page.name !== 'Symbols') {
-        populatePage(page)
-      }
-    }
-    context.document.reloadInspector()
-  } else {
-    console.log('Document contains no pages, or content document does not exist.')
-    sketch.UI.message('Document contains no pages, or content document does not exist.')
-  }
-}
-
-export function syncCurrentPage (context) {
-  console.log('syncCurrentPage')
-  if (contentDocumentExists) {
-    var contentFile = Settings.documentSettingForKey(document, 'excelTranslateContentFile')
-    loadData(contentFile)
-    populatePage()
-    context.document.reloadInspector()
-  }
-}
-
 function contentDocumentExists () {
   var contentFile = Settings.documentSettingForKey(document, 'excelTranslateContentFile')
-  console.log('contentFile', contentFile)
-
+  console.log('contentFile: ', contentFile)
   if (contentFile) {
     if (fs.existsSync(contentFile)) {
       console.log('file exists: ', contentFile)
@@ -114,22 +123,26 @@ function contentDocumentExists () {
 }
 
 function showLanguageSelectionPopup (languageOptions) {
-  var selection = UI.getSelectionFromUser(
-    'Language?',
-    languageOptions
+  UI.getInputFromUser(
+    'Sync to language?',
+    {
+      type: UI.INPUT_TYPE.selection,
+      possibleValues: languageOptions
+    },
+    (err, value) => {
+      if (err) {
+        // most likely the user canceled the input
+        return
+      }
+      console.log('selected language')
+      console.log(value)
+      selectedLanguage = value // languageOptions[selection[1]]
+    }
   )
-
-  var ok = selection[2]
-  if (ok) {
-    selectedLanguage = languageOptions[selection[1]]
-    console.log(selectedLanguage)
-  } else {
-    console.log('showLanguageSelectionPopup() pressed cancel.')
-  }
 }
 
 function loadExcelData (contentFile) {
-  const xlsData = fs.readFileSync(contentFile)
+  let xlsData = fs.readFileSync(contentFile)
 
   var workbook = XLSX.read(xlsData, {
     type: 'buffer'
@@ -138,8 +151,8 @@ function loadExcelData (contentFile) {
   var firstSheetName = workbook.SheetNames[0]
   var worksheet = workbook.Sheets[firstSheetName]
 
-  var excelJson = XLSX.utils.sheet_to_json(worksheet)
-
+  var excelJson = XLSX.utils.sheet_to_json(worksheet, { range: 0, defval: '' })
+  console.log(excelJson)
   let rowNumber = 2 // Excel row starts at 0, and 1st row is key/value
 
   // get language options
@@ -149,12 +162,15 @@ function loadExcelData (contentFile) {
     sketch.UI.message('File format not supported. Language options not found')
     return
   }
+  console.log(keyAndLanguageOptions)
   keyAndLanguageOptions.shift() // remove 'key'
   for (let language of keyAndLanguageOptions) {
     languageOptions.push(language)
   }
 
   // ask for language first so we don't load all language data into the object.
+  console.log('showLanguageSelectionPopup')
+  console.log(languageOptions)
   showLanguageSelectionPopup(languageOptions)
   if (!selectedLanguage) {
     console.log('loadExcelData() aborted. No language selected.')
@@ -174,6 +190,30 @@ function loadExcelData (contentFile) {
   onComplete()
 }
 
+function analyzeLayer (layers) {
+  for (let layer of layers) {
+    console.log(layer.name, layer.type)
+    switch (layer.type) {
+      case String(sketch.Types.Group):
+        console.log('group layer')
+        analyzeLayer(layer.layers)
+        break
+      case String(sketch.Types.SymbolInstance):
+        console.log('symbol layer')
+        updateSymbolLayer(layer)
+        break
+      case String(sketch.Types.Text):
+        console.log('text layer')
+        updateTextLayer(layer)
+        break
+      case String(sketch.Types.Artboard):
+        console.log('artboard layer')
+        analyzeLayer(layer.layers)
+        break
+    }
+  }
+}
+
 function populatePage (page) {
   // abort if no language is chosen
   if (!selectedLanguage) {
@@ -188,28 +228,14 @@ function populatePage (page) {
   }
 
   console.log('page layers: ' + page.layers.length)
-  for (let layer of page.layers) {
-    console.log(layer.name, layer.type)
-    switch (layer.type) {
-      case String(sketch.Types.SymbolInstance):
-        updateSymbolLayer(layer)
-        break
-      case String(sketch.Types.Text):
-        updateTextLayer(layer)
-        break
-      case String(sketch.Types.Artboard):
-        updateArtboardLayer(layer)
-        console.log('artboard')
-        break
-    }
-  }
+  analyzeLayer(page.layers)
   onComplete()
 }
 
 // Load CSV File
 /*
 function loadCSVData (contentFile) {
-  const csvData = fs.readFileSync(contentFile)
+  let csvData = fs.readFileSync(contentFile)
 
   csv({
     noheader: false
@@ -234,6 +260,7 @@ function updateTextLayer (layer) {
   console.log(layer.name)
   if (contentDictionary[layer.name]) {
     layer.text = contentDictionary[layer.name]
+    console.log('new value', layer.name)
   }
   console.log('updateTextLayer done')
 }
@@ -255,22 +282,22 @@ function updateSymbolLayer (symbol) {
   console.log('updateSymbolLayer done')
 }
 
-function updateArtboardLayer (artboard) {
-  console.log('updateArtboardLayer')
-  console.log('page layers: ' + artboard.layers.length)
-  for (let layer of artboard.layers) {
-    console.log(layer.name, layer.type)
-    switch (layer.type) {
-      case String(sketch.Types.SymbolInstance):
-        updateSymbolLayer(layer)
-        break
-      case String(sketch.Types.Text):
-        updateTextLayer(layer)
-        break
-    }
-  }
-  console.log('updateArtboardLayer done')
-}
+// function updateArtboardLayer (artboard) {
+//   console.log('updateArtboardLayer')
+//   console.log('page layers: ' + artboard.layers.length)
+//   for (let layer of artboard.layers) {
+//     console.log(layer.name, layer.type)
+//     switch (layer.type) {
+//       case String(sketch.Types.SymbolInstance):
+//         updateSymbolLayer(layer)
+//         break
+//       case String(sketch.Types.Text):
+//         updateTextLayer(layer)
+//         break
+//     }
+//   }
+//   console.log('updateArtboardLayer done')
+// }
 
 // **********************
 //   Helper methods
