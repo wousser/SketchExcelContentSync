@@ -1,7 +1,6 @@
 import sketch from 'sketch'
 import fs from '@skpm/fs'
 import dialog from '@skpm/dialog'
-import BrowserWindow from 'sketch-module-web-view'
 
 var constants = require('./constants')
 var UI = require('sketch/ui')
@@ -10,31 +9,11 @@ var Settings = require('sketch/settings')
 // var csv = require('csvtojson')
 var XLSX = require('xlsx')
 
-// documentation: https://developer.sketchapp.com/reference/api/
-// Based on: https://github.com/DWilliames/Google-sheets-content-sync-sketch-plugin/blob/master/Google%20sheets%20content%20sync.sketchplugin/Contents/Sketch/main.js
-
 var document = sketch.getSelectedDocument()
 
 var contentDictionary = {}
 var languageOptions = []
 var selectedLanguage
-
-// var contentFile
-// if (fs.existsSync(defaultContentFileXLSX)) {
-//   contentFile = defaultContentFileXLSX
-// } else if (fs.existsSync(defaultContentFileCSV)) {
-//   contentFile = defaultContentFileCSV
-// }
-
-export function panelTest (context) {
-  console.log('panelTest4')
-
-  const options = {
-    identifier: 'unique.id'
-  }
-  const browserWindow = new BrowserWindow(options)
-  browserWindow.loadURL(require('./my-screen.html'))
-}
 
 export function syncCurrentPage (context) {
   console.log('syncCurrentPage')
@@ -44,6 +23,9 @@ export function syncCurrentPage (context) {
     loadData(contentFile)
     populatePage()
     context.document.reloadInspector()
+  } else {
+    console.log('Content file not found.')
+    sketch.UI.message('Content file not found.')
   }
 }
 
@@ -60,13 +42,13 @@ export function syncAllPages (context) {
     }
     context.document.reloadInspector()
   } else {
-    console.log('Document contains no pages, or content document does not exist.')
-    sketch.UI.message('Document contains no pages, or content document does not exist.')
+    console.log('Document contains no pages, or content file not found.')
+    sketch.UI.message('Document contains no pages, or content file not found.')
   }
 }
 
-export function selectContentDocument (context) {
-  console.log('selectContentDocument')
+export function selectContentFile (context) {
+  console.log('selectContentFile')
   var filePaths = dialog.showOpenDialog({
     properties: ['openFile'],
     defaultPath: 'directory',
@@ -81,7 +63,7 @@ export function selectContentDocument (context) {
     // set as document key
     Settings.setDocumentSettingForKey(document, 'excelTranslateContentFile', contentFile)
     console.log('DocumentKey: ', Settings.documentSettingForKey(document, 'excelTranslateContentFile'))
-    sketch.UI.message('Content document set! Now you can translate the current page or all pages.')
+    sketch.UI.message('Content file set! Now you can translate the current page or all pages.')
   } else {
     console.log('no file selected')
     sketch.UI.message('No file selected. Select Excel or CSV file to continue. Generate a file if you don\'t have one.')
@@ -94,6 +76,7 @@ function loadData (contentFile) {
   switch (fileType.toLowerCase()) {
     case '.csv':
       console.log('csv')
+      // TODO: Support csv files
       // loadCSVData(contentFile)
       break
     // eslint-disable-next-line no-sequences
@@ -123,9 +106,11 @@ function contentDocumentExists () {
 }
 
 function showLanguageSelectionPopup (languageOptions) {
-  let fileName = Settings.documentSettingForKey(document, 'excelTranslateContentFile')
+
+  let contentFile = Settings.documentSettingForKey(document, 'excelTranslateContentFile')
+  let contentFileName = path.basename(contentFile)
   UI.getInputFromUser(
-    `Sync to language?\n\nContent file: ${fileName}`,
+    `Sync to language?\n\nContent file:\n${contentFileName}`,
     {
       type: UI.INPUT_TYPE.selection,
       possibleValues: languageOptions
@@ -178,12 +163,15 @@ function loadExcelData (contentFile) {
     return
   }
   var currentArboardName = ''
+
   for (var row in excelJson) {
-    // skip empty content
+    // Save current artboard
     if (excelJson[row]['key'].includes(constants.artboardPrefix)) {
       currentArboardName = excelJson[row]['key']
       console.log('updated current arboard' + currentArboardName)
     }
+
+    // skip empty content
     if (excelJson[row][selectedLanguage]) {
       console.log('rowNumber: ' + rowNumber, currentArboardName)
       contentDictionary[String(currentArboardName + '.' + excelJson[row]['key'])] = String(excelJson[row][selectedLanguage])
@@ -238,24 +226,6 @@ function populatePage (page) {
   onComplete()
 }
 
-// Load CSV File
-/*
-function loadCSVData (contentFile) {
-  let csvData = fs.readFileSync(contentFile)
-
-  csv({
-    noheader: false
-    // output: "csv"
-  })
-    .fromString(csvData.toString())
-    .subscribe((json, lineNumber) => {
-      console.log(lineNumber)
-      // console.log(json)
-      updateContent(json['key'], json[selectedLanguage])
-    }, onError, onComplete)
-}
-*/
-
 function onComplete () {
   console.log('Completed')
   sketch.UI.message('Completed')
@@ -263,12 +233,10 @@ function onComplete () {
 
 function updateTextLayer (layer) {
   console.log('updateTextLayer')
-  
-  // TODO: Add Artboard
+
   let artboardAndLayerName = constants.artboardPrefix + layer.getParentArtboard().name + '.' + layer.name
   console.log(artboardAndLayerName)
   if (contentDictionary[artboardAndLayerName]) {
-  // if (contentDictionary[layer.name]) {
     layer.text = contentDictionary[artboardAndLayerName]
     console.log('new value', layer.name, artboardAndLayerName, layer.text)
   }
@@ -277,12 +245,13 @@ function updateTextLayer (layer) {
 
 function updateSymbolLayer (symbol) {
   console.log('updateSymbolLayer')
-  console.log(symbol.name)
-  // console.log(symbol)
+
+  let artboardAndSymbolName = constants.artboardPrefix + symbol.getParentArtboard().name + '.' + symbol.name
+  console.log(artboardAndSymbolName)
 
   for (let override of symbol.overrides) {
     if (override.property === 'stringValue') {
-      let layerNameAndOverride = symbol.name + constants.excelDivider + layerNamesFromPath(override.path)
+      let layerNameAndOverride = artboardAndSymbolName + constants.excelDivider + layerNamesFromPath(override.path)
 
       if (contentDictionary[layerNameAndOverride]) {
         override.value = contentDictionary[layerNameAndOverride]
@@ -291,23 +260,6 @@ function updateSymbolLayer (symbol) {
   }
   console.log('updateSymbolLayer done')
 }
-
-// function updateArtboardLayer (artboard) {
-//   console.log('updateArtboardLayer')
-//   console.log('page layers: ' + artboard.layers.length)
-//   for (let layer of artboard.layers) {
-//     console.log(layer.name, layer.type)
-//     switch (layer.type) {
-//       case String(sketch.Types.SymbolInstance):
-//         updateSymbolLayer(layer)
-//         break
-//       case String(sketch.Types.Text):
-//         updateTextLayer(layer)
-//         break
-//     }
-//   }
-//   console.log('updateArtboardLayer done')
-// }
 
 // **********************
 //   Helper methods

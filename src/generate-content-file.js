@@ -1,18 +1,17 @@
 import sketch from 'sketch'
 import fs from '@skpm/fs'
 import dialog from '@skpm/dialog'
+
 var UI = require('sketch/ui')
 var constants = require('./constants')
 var path = require('path')
 var XLSX = require('xlsx')
 
-// documentation: https://developer.sketchapp.com/reference/api/
-// Based on: https://github.com/DWilliames/Google-sheets-content-sync-sketch-plugin/blob/master/Google%20sheets%20content%20sync.sketchplugin/Contents/Sketch/main.js
-
 let document = sketch.getSelectedDocument()
 var contentLanguage = 'en-US' // set en-US as standard
-
 var renameTextLayersFlag = false
+var generatedFileData = []
+var duplicateKeys = 0
 
 console.log('2057')
 
@@ -22,8 +21,6 @@ class ExcelContent {
     this.value = value
   }
 }
-var generatedFileData = []
-var duplicateKeys = 0
 
 export default function () {
   if (document.pages) {
@@ -50,12 +47,11 @@ function getPageContent (page) {
   console.log('getPageContent: ', page.name)
 
   for (let layer of page.layers) {
-    // console.log(layer.name)
-    getContent(layer)
+    findContentLayer(layer)
   }
 }
 
-function getContent (layer) {
+function findContentLayer (layer) {
   switch (layer.type) {
     case String(sketch.Types.SymbolInstance):
       contentFromSymbolLayer(layer)
@@ -70,7 +66,7 @@ function getContent (layer) {
       // check for groups and combined layers
       if (layer.layers) {
         for (let eachLayer of layer.layers) {
-          getContent(eachLayer)
+          findContentLayer(eachLayer)
         }
       }
   }
@@ -83,7 +79,6 @@ function contentFromSymbolLayer (symbol) {
       if (override.property === 'stringValue') {
         // console.log('stringValue')
         console.log(symbol.id, override.id, override.path, symbol.name)
-  
         let key = symbol.name + constants.excelDivider + layerNamesFromPath(override.path)
         addToSheet(key, override.value)
       }
@@ -100,7 +95,7 @@ function contentFromTextLayer (layer) {
 
 function contentFromArtboardLayer (artboard) {
   console.log('contentFromArtboardLayer: ', artboard.name)
-  // add artboard market to sheet
+  // add artboard marker to sheet
   let artboardDivider = 'ARTBOARD: ' + artboard.name
   addToSheet('', '') // add empty row
   addToSheet(artboardDivider, '')
@@ -108,11 +103,12 @@ function contentFromArtboardLayer (artboard) {
   // console.log('artboard layers: ' + artboard.layers.length)
   for (let layer of artboard.layers) {
     // console.log(layer.name, layer.type)
-    getContent(layer)
+    findContentLayer(layer)
   }
 }
 
 function addToSheet (key, value) {
+  // TODO: Add checkbox to skip duplicate keys
   // check if key already exists, except for empty row
   // if (generatedFileData.filter(excelContent => (excelContent.key === key)).length && key !== '') {
   if (false) {
@@ -128,6 +124,30 @@ function addToSheet (key, value) {
 
 function renameTextLayers (page) {
   console.log('renameTextLayers: ', page.name)
+  for (let layer of page.layers) {
+    findTextAndSymbolLayer(layer)
+  }
+}
+
+function findTextAndSymbolLayer (layer) {
+  switch (layer.type) {
+    case String(sketch.Types.SymbolInstance):
+      layer.name = constants.translateLayerPrefix + layer.name
+      break
+    case String(sketch.Types.Text):
+      layer.name = constants.translateLayerPrefix + layer.name
+      break
+    // case String(sketch.Types.Artboard):
+    //   contentFromArtboardLayer(layer)
+    //   break
+    default:
+      // check for artboards, groups and combined layers
+      if (layer.layers) {
+        for (let eachLayer of layer.layers) {
+          findTextAndSymbolLayer(eachLayer)
+        }
+      }
+  }
 }
 
 function askRenameTextLayers () {
