@@ -4,6 +4,10 @@
   "engines": {
     "sketch": ">=3.0"
   },
+  "repository" : {
+    "type": "git",
+     "url": "git+https://github.com/wousser/SketchExcelContentSync.git"
+  },
   "skpm": {
     "name": "Excel Content Sync",
     "manifest": "src/manifest.json",
