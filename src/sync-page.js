@@ -123,8 +123,9 @@ function contentDocumentExists () {
 }
 
 function showLanguageSelectionPopup (languageOptions) {
+  let fileName = Settings.documentSettingForKey(document, 'excelTranslateContentFile')
   UI.getInputFromUser(
-    'Sync to language?',
+    `Sync to language?\n\nContent file: ${fileName}`,
     {
       type: UI.INPUT_TYPE.selection,
       possibleValues: languageOptions
@@ -176,17 +177,22 @@ function loadExcelData (contentFile) {
     console.log('loadExcelData() aborted. No language selected.')
     return
   }
-
+  var currentArboardName = ''
   for (var row in excelJson) {
     // skip empty content
+    if (excelJson[row]['key'].includes(constants.artboardPrefix)) {
+      currentArboardName = excelJson[row]['key']
+      console.log('updated current arboard' + currentArboardName)
+    }
     if (excelJson[row][selectedLanguage]) {
-      console.log('rowNumber: ' + rowNumber)
-      contentDictionary[String(excelJson[row]['key'])] = String(excelJson[row][selectedLanguage])
+      console.log('rowNumber: ' + rowNumber, currentArboardName)
+      contentDictionary[String(currentArboardName + '.' + excelJson[row]['key'])] = String(excelJson[row][selectedLanguage])
     } else {
       console.log('skipped rowNumber: ' + rowNumber)
     }
     rowNumber += 1
   }
+  console.log(contentDictionary)
   onComplete()
 }
 
@@ -257,10 +263,14 @@ function onComplete () {
 
 function updateTextLayer (layer) {
   console.log('updateTextLayer')
-  console.log(layer.name)
-  if (contentDictionary[layer.name]) {
-    layer.text = contentDictionary[layer.name]
-    console.log('new value', layer.name)
+  
+  // TODO: Add Artboard
+  let artboardAndLayerName = constants.artboardPrefix + layer.getParentArtboard().name + '.' + layer.name
+  console.log(artboardAndLayerName)
+  if (contentDictionary[artboardAndLayerName]) {
+  // if (contentDictionary[layer.name]) {
+    layer.text = contentDictionary[artboardAndLayerName]
+    console.log('new value', layer.name, artboardAndLayerName, layer.text)
   }
   console.log('updateTextLayer done')
 }

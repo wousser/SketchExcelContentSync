@@ -12,6 +12,10 @@ var XLSX = require('xlsx')
 let document = sketch.getSelectedDocument()
 var contentLanguage = 'en-US' // set en-US as standard
 
+var renameTextLayersFlag = false
+
+console.log('2057')
+
 class ExcelContent {
   constructor (key, value) {
     this.key = key
@@ -24,14 +28,18 @@ var duplicateKeys = 0
 export default function () {
   if (document.pages) {
     // ask for language
-    askContentLanguage()
-    for (let page of document.pages) {
-      // Don't add Symbols page
-      if (page.name !== 'Symbols') {
-        getPageContent(page)
+    if (askContentLanguage() && askRenameTextLayers()) {
+      for (let page of document.pages) {
+        // Don't add Symbols page
+        if (page.name !== 'Symbols') {
+          if (renameTextLayersFlag) {
+            renameTextLayers(page)
+          }
+          getPageContent(page)
+        }
       }
+      saveToFile()
     }
-    saveToFile()
   } else {
     console.log('Document contains no pages')
     sketch.UI.message('Document contains no pages')
@@ -61,8 +69,8 @@ function getContent (layer) {
     default:
       // check for groups and combined layers
       if (layer.layers) {
-        for (let individualLayer of layer.layers) {
-          getContent(individualLayer)
+        for (let eachLayer of layer.layers) {
+          getContent(eachLayer)
         }
       }
   }
@@ -70,21 +78,24 @@ function getContent (layer) {
 
 function contentFromSymbolLayer (symbol) {
   console.log('contentFromSymbolLayer: ', symbol.name)
-
-  for (let override of symbol.overrides) {
-    if (override.property === 'stringValue') {
-      // console.log('stringValue')
-      console.log(symbol.id, override.id, override.path, symbol.name)
-
-      let key = symbol.name + constants.excelDivider + layerNamesFromPath(override.path)
-      addToSheet(key, override.value)
+  if (symbol.name.charAt(0) === constants.translateLayerPrefix) {
+    for (let override of symbol.overrides) {
+      if (override.property === 'stringValue') {
+        // console.log('stringValue')
+        console.log(symbol.id, override.id, override.path, symbol.name)
+  
+        let key = symbol.name + constants.excelDivider + layerNamesFromPath(override.path)
+        addToSheet(key, override.value)
+      }
     }
   }
 }
 
 function contentFromTextLayer (layer) {
-  console.log('contentFromTextLayer: ', layer.name)
-  addToSheet(layer.name, layer.text)
+  console.log('contentFromTextLayer', layer.name, layer.getParentArtboard().name)
+  if (layer.name.charAt(0) === constants.translateLayerPrefix) {
+    addToSheet(layer.name, layer.text)
+  }
 }
 
 function contentFromArtboardLayer (artboard) {
@@ -103,7 +114,8 @@ function contentFromArtboardLayer (artboard) {
 
 function addToSheet (key, value) {
   // check if key already exists, except for empty row
-  if (generatedFileData.filter(excelContent => (excelContent.key === key)).length && key !== '') {
+  // if (generatedFileData.filter(excelContent => (excelContent.key === key)).length && key !== '') {
+  if (false) {
     // skip
     duplicateKeys += 1
   } else {
@@ -114,27 +126,56 @@ function addToSheet (key, value) {
   // console.log('Adding to sheet: ' + key, value)
 }
 
-function askContentLanguage () {
+function renameTextLayers (page) {
+  console.log('renameTextLayers: ', page.name)
+}
+
+function askRenameTextLayers () {
+  var returnValue = false
   UI.getInputFromUser(
-    'Current language of the document?',
+    `Prefix text and symbol layers with '${constants.translateLayerPrefix}'?`,
+    {
+      type: UI.INPUT_TYPE.selection,
+      possibleValues: ['yes', 'no'],
+      initialValue: 'no'
+    },
+    (err, value) => {
+      if (err) {
+        console.log('pressed cancel')
+        // most likely the user canceled the input
+        return
+      }
+      if (value !== 'null' && value.length > 1) {
+        renameTextLayersFlag = value === 'yes'
+        console.log('set renameTextLayersFlag', renameTextLayersFlag)
+        returnValue = true
+      }
+    }
+  )
+  return returnValue
+}
+
+function askContentLanguage () {
+  var returnValue = false
+  UI.getInputFromUser(
+    'Current document language?',
     {
       initialValue: 'en-US'
     },
     (err, value) => {
       if (err) {
+        console.log('pressed cancel')
         // most likely the user canceled the input
         return
       }
       if (value !== 'null' && value.length > 1) {
-        console.log('set contentLanguage')
         contentLanguage = value
+        console.log('set contentLanguage', contentLanguage)
+        returnValue = true
       }
     }
   )
-  // let userInput = UI.getInputFromUser('Content language?', 'en-US')
-  // if (userInput !== 'null' && userInput.length > 1) {
-  //   contentLanguage = userInput
-  // }
+  return returnValue
 }
 
 function saveToFile () {
@@ -154,7 +195,7 @@ function saveToFile () {
 
   // check if user want to save the file
   if (filePath) {
-    console.log(generatedFileData)
+    // console.log(generatedFileData)
     let book = XLSX.utils.book_new()
     let sheet = XLSX.utils.json_to_sheet(generatedFileData)
     sheet['B1'].v = contentLanguage

@@ -1,7 +1,11 @@
 let excelDivider = ' / '
 let sketchSymbolDivider = '/'
+let artboardPrefix = 'ARTBOARD: '
+let translateLayerPrefix = '#'
 
 module.exports = {
   excelDivider,
-  sketchSymbolDivider
+  sketchSymbolDivider,
+  artboardPrefix,
+  translateLayerPrefix
 }
