@@ -22,8 +22,12 @@ Decouple and Sync multi-language content between Sketch and Excel.
 1. [Download the Zip](https://github.com/wousser/SketchExcelContentSync/archive/master.zip) and unzip the package
 2. Double click on `excelContentSync.sketchplugin` for auto installation
 
-## How many language are supported
-- As many as you want. Each columnn in your Excel file can be chosen as a language source.
+## Compatibility
+
+The plugin is compatible with the latest version of Sketch 55.2 🎉 (And previous versions).
+
+## How many languages are supported
+- As many as you need. Each columnn in your Excel file can be chosen as a language source.
 
 ## What about symbol overrides
 - Symbol overrides are supported. Prefix your symbols with '#' to include them. The will be listed as 'symbolName / overrideName' in the Excel file.
