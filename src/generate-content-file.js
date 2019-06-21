@@ -133,14 +133,15 @@ function findTextAndSymbolLayer (layer) {
   switch (layer.type) {
     case String(sketch.Types.SymbolInstance):
       // TODO: Check if symbol layer has text content
-      layer.name = constants.translateLayerPrefix + layer.name
+      if (layer.name.charAt(0) !== '#') {
+        layer.name = constants.translateLayerPrefix + layer.name
+      }
       break
     case String(sketch.Types.Text):
-      layer.name = constants.translateLayerPrefix + layer.name
+      if (layer.name.charAt(0) !== '#') {
+        layer.name = constants.translateLayerPrefix + layer.name
+      }
       break
-    // case String(sketch.Types.Artboard):
-    //   contentFromArtboardLayer(layer)
-    //   break
     default:
       // check for artboards, groups and combined layers
       if (layer.layers) {

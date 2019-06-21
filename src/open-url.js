@@ -1,6 +1,5 @@
 export function openFeedback (context) {
-// var report = function(context) {
-  openUrl('https://github.com')
+  openUrl('https://github.com/wousser/SketchExcelContentSync')
 }
 
 function openUrl (url) {
