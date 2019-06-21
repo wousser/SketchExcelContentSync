@@ -1,148 +1,253 @@
 import sketch from 'sketch'
 import fs from '@skpm/fs'
 import dialog from '@skpm/dialog'
-const path = require('path')
-const XLSX = require('xlsx')
 
-// documentation: https://developer.sketchapp.com/reference/api/
-// Based on: https://github.com/DWilliames/Google-sheets-content-sync-sketch-plugin/blob/master/Google%20sheets%20content%20sync.sketchplugin/Contents/Sketch/main.js
+var UI = require('sketch/ui')
+var constants = require('./constants')
+var path = require('path')
+var XLSX = require('xlsx')
 
-const document = sketch.getSelectedDocument()
-// const page = document.selectedPage
-
-const directory = path.dirname(document.path)
-// const contentFileName = 'content.csv'
-
-//Excel header
+let document = sketch.getSelectedDocument()
+var contentLanguage = 'en-US' // set en-US as standard
+var renameTextLayersFlag = false
 var generatedFileData = []
-
 var duplicateKeys = 0
-// const excelHeader = new ExcelContent('key', 'en-US')
-// generatedFileData.push(excelHeader)
 
-export default function() {
+console.log('2057')
 
+class ExcelContent {
+  constructor (key, value) {
+    this.key = key
+    this.value = value
+  }
+}
+
+export default function () {
   if (document.pages) {
-
-    for (let page of document.pages) {
-      //Don't add symbols page
-      if (page.name != "Symbols") {
-        // console.log(page.name)
-
-        for (let layer of page.layers) {
-          // console.log(layer.name)
-          getLayers(layer)
+    // ask for language
+    if (askContentLanguage() && askRenameTextLayers()) {
+      for (let page of document.pages) {
+        // Don't add Symbols page
+        if (page.name !== 'Symbols') {
+          if (renameTextLayersFlag) {
+            renameTextLayers(page)
+          }
+          getPageContent(page)
         }
       }
+      saveToFile()
     }
-    saveToFile()
   } else {
-    console.log("Document contains no pages")
+    console.log('Document contains no pages')
+    sketch.UI.message('Document contains no pages')
   }
 }
 
-function layerNamesFromPath(path) {
-    var layerNames = []
-    let layerIDs = path.split("/")
-    for (let layerID of layerIDs) {
-      let layer = document.getLayerWithID(layerID)
-      let layerName = layer.name
-      layerNames.push(layerName)
-    }
-    return layerNames.join('/')
+function getPageContent (page) {
+  console.log('getPageContent: ', page.name)
+
+  for (let layer of page.layers) {
+    findContentLayer(layer)
+  }
 }
 
-function getLayers(layer) {
-  if (layer.layers) {
-    // console.log("still has layers")
-    for (let layer of layer.layers) {
-      getLayers(layer)
-    }
-  } else {
-    // console.log("No more layers " + layer.name, layer.type )
-    if (layer.type === String(sketch.Types.Text)) {
-      // console.log("Text layer")
-      addToSheet(layer.name, layer.text)
-    }
-
-    if (layer.type === String(sketch.Types.SymbolInstance)) {
-      console.log("SymbolInstance layer")
-      console.log(layer.name)
-      // console.log(layer)
-      for (let override of layer.overrides) {
-        // console.log("override:")
-        // console.log(override)
-        if (override.property == "stringValue") {
-          console.log("stringValue affectedLayer: ")
-          console.log(override.id)
-          console.log(override.path)
-
-          // let layerIDs = override.id.split("/")
-
-          // let symbol = document.getLayerWithID(symbolID)
-          // var key = layer.name
-          // if (symbol) {
-          //   console.log(symbol.name)
-          //   key = key + "/" + symbol.name
-          // }
-          let key = layer.name + "/" + layerNamesFromPath(override.path)
-          addToSheet(key, override.value)
+function findContentLayer (layer) {
+  switch (layer.type) {
+    case String(sketch.Types.SymbolInstance):
+      contentFromSymbolLayer(layer)
+      break
+    case String(sketch.Types.Text):
+      contentFromTextLayer(layer)
+      break
+    case String(sketch.Types.Artboard):
+      contentFromArtboardLayer(layer)
+      break
+    default:
+      // check for groups and combined layers
+      if (layer.layers) {
+        for (let eachLayer of layer.layers) {
+          findContentLayer(eachLayer)
         }
-        // if (override.property == "symbolID") {
-        //   // console.log("symbolID affectedLayer: ")
-        //   // console.log(override.affectedLayer)
-        //   // addToSheet(layer.name + "." + override.affectedLayer.name, override.value)
-        // }
+      }
+  }
+}
+
+function contentFromSymbolLayer (symbol) {
+  console.log('contentFromSymbolLayer: ', symbol.name)
+  if (symbol.name.charAt(0) === constants.translateLayerPrefix) {
+    for (let override of symbol.overrides) {
+      if (override.property === 'stringValue') {
+        // console.log('stringValue')
+        console.log(symbol.id, override.id, override.path, symbol.name)
+        let key = symbol.name + constants.excelDivider + layerNamesFromPath(override.path)
+        addToSheet(key, override.value)
       }
     }
   }
 }
 
-function ExcelContent(key, value) {
-  this.key = key
-  this.value = value
+function contentFromTextLayer (layer) {
+  console.log('contentFromTextLayer', layer.name, layer.getParentArtboard().name)
+  if (layer.name.charAt(0) === constants.translateLayerPrefix) {
+    addToSheet(layer.name, layer.text)
+  }
 }
 
-function addToSheet(key, value) {
-  //check if key already exists
-  if (generatedFileData.filter(excelContent => (excelContent.key === key)).length) {
-    //skip
+function contentFromArtboardLayer (artboard) {
+  console.log('contentFromArtboardLayer: ', artboard.name)
+  // add artboard marker to sheet
+  let artboardDivider = 'ARTBOARD: ' + artboard.name
+  addToSheet('', '') // add empty row
+  addToSheet(artboardDivider, '')
+
+  // console.log('artboard layers: ' + artboard.layers.length)
+  for (let layer of artboard.layers) {
+    // console.log(layer.name, layer.type)
+    findContentLayer(layer)
+  }
+}
+
+function addToSheet (key, value) {
+  // TODO: Add checkbox to skip duplicate keys
+  // check if key already exists, except for empty row
+  // if (generatedFileData.filter(excelContent => (excelContent.key === key)).length && key !== '') {
+  if (false) {
+    // skip
     duplicateKeys += 1
   } else {
-    //add to array
-    const keyValue = new ExcelContent(key, value)
+    // add to array
+    let keyValue = new ExcelContent(key, value)
     generatedFileData.push(keyValue)
   }
-  console.log("Adding to sheet: " + key, value)
+  // console.log('Adding to sheet: ' + key, value)
 }
 
-function saveToFile() {
-  var date = new Date()
-  var dateFormat = date.getFullYear() + "" + (date.getMonth() + 1) + "" + date.getDate()
-  console.log(dateFormat)
-  var sketchFileName = "Sketch"
-  var defaultPath = path.join(directory, 'sketchFileName-content-'+ dateFormat +'.xlsx')
-  console.log(defaultPath)
+function renameTextLayers (page) {
+  console.log('renameTextLayers: ', page.name)
+  for (let layer of page.layers) {
+    findTextAndSymbolLayer(layer)
+  }
+}
 
+function findTextAndSymbolLayer (layer) {
+  switch (layer.type) {
+    case String(sketch.Types.SymbolInstance):
+      // TODO: Check if symbol layer has text content
+      layer.name = constants.translateLayerPrefix + layer.name
+      break
+    case String(sketch.Types.Text):
+      layer.name = constants.translateLayerPrefix + layer.name
+      break
+    // case String(sketch.Types.Artboard):
+    //   contentFromArtboardLayer(layer)
+    //   break
+    default:
+      // check for artboards, groups and combined layers
+      if (layer.layers) {
+        for (let eachLayer of layer.layers) {
+          findTextAndSymbolLayer(eachLayer)
+        }
+      }
+  }
+}
+
+function askRenameTextLayers () {
+  var returnValue = false
+  UI.getInputFromUser(
+    `Prefix text and symbol layers with '${constants.translateLayerPrefix}'?`,
+    {
+      type: UI.INPUT_TYPE.selection,
+      possibleValues: ['yes', 'no'],
+      initialValue: 'no'
+    },
+    (err, value) => {
+      if (err) {
+        console.log('pressed cancel')
+        // most likely the user canceled the input
+        return
+      }
+      if (value !== 'null' && value.length > 1) {
+        renameTextLayersFlag = value === 'yes'
+        console.log('set renameTextLayersFlag', renameTextLayersFlag)
+        returnValue = true
+      }
+    }
+  )
+  return returnValue
+}
+
+function askContentLanguage () {
+  var returnValue = false
+  UI.getInputFromUser(
+    'Current document language?',
+    {
+      initialValue: 'en-US'
+    },
+    (err, value) => {
+      if (err) {
+        console.log('pressed cancel')
+        // most likely the user canceled the input
+        return
+      }
+      if (value !== 'null' && value.length > 1) {
+        contentLanguage = value
+        console.log('set contentLanguage', contentLanguage)
+        returnValue = true
+      }
+    }
+  )
+  return returnValue
+}
+
+function saveToFile () {
+  var date = new Date()
+  var dateFormat = date.getFullYear() + '' + (date.getMonth() + 1) + '' + date.getDate()
+
+  let name = decodeURI(path.basename(document.path, '.sketch'))
+  let contentFileName = name + '-content-' + dateFormat + '.xlsx'
+  var defaultPath = path.join(path.dirname(document.path), contentFileName)
+  console.log(defaultPath)
   var filePath = dialog.showSaveDialog({
     filters: [
       { name: 'Excel', extensions: ['xlsx'] }
     ],
     defaultPath: defaultPath
   })
-  console.log(filePath);
-  console.log(generatedFileData);
-  const book = XLSX.utils.book_new()
-  const sheet = XLSX.utils.json_to_sheet(generatedFileData)
-  XLSX.utils.book_append_sheet(book, sheet, "content");
 
-  const content = XLSX.write(book, { type: 'buffer', bookType: 'xlsx', bookSST: false });
-  fs.writeFileSync(filePath, content, { encoding: 'binary' });
-  console.log("File created.")
-  onComplete()
+  // check if user want to save the file
+  if (filePath) {
+    // console.log(generatedFileData)
+    let book = XLSX.utils.book_new()
+    let sheet = XLSX.utils.json_to_sheet(generatedFileData)
+    sheet['B1'].v = contentLanguage
+    XLSX.utils.book_append_sheet(book, sheet, 'content')
+
+    let content = XLSX.write(book, { type: 'buffer', bookType: 'xlsx', bookSST: false })
+    fs.writeFileSync(filePath, content, { encoding: 'binary' })
+    console.log('File created as:', filePath)
+
+    // done
+    console.log('Completed. Duplicates: ' + duplicateKeys + ' File saved as ' + path.basename(filePath))
+    sketch.UI.message('Content file generated. Found ' + duplicateKeys + ' duplicated keys. File saved as ' + decodeURI(path.basename(filePath)))
+  }
 }
 
-function onComplete() {
-  console.log("Completed")
-  sketch.UI.message("Completed. Duplicates: " + duplicateKeys + " File saved as .xlsx")
+// **********************
+//   Helper methods
+// **********************
+// TODO: function duplicated
+function layerNamesFromPath (path) {
+  var layerNames = []
+  let layerIDs = path.split(constants.sketchSymbolDivider)
+  for (let layerID of layerIDs) {
+    let layer = document.getLayerWithID(layerID)
+
+    // TODO: Sketch libraries not supported.
+    if (layer) {
+      let layerName = layer.name
+      layerNames.push(layerName)
+    }
+  }
+  // console.log(layerNames.join(constants.excelDivider))
+  return layerNames.join(constants.excelDivider)
 }
