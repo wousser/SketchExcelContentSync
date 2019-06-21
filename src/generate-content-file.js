@@ -132,6 +132,7 @@ function renameTextLayers (page) {
 function findTextAndSymbolLayer (layer) {
   switch (layer.type) {
     case String(sketch.Types.SymbolInstance):
+      // TODO: Check if symbol layer has text content
       layer.name = constants.translateLayerPrefix + layer.name
       break
     case String(sketch.Types.Text):
