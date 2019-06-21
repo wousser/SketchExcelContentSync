@@ -2,7 +2,7 @@
 
 Decouple and Sync multi-language content between Sketch and Excel.
 
-![](ScreenRecording.gif)
+![ScreenRecording](ScreenRecording.gif)
 
 ## Use cases
 - Decouple your content from Sketch so you can hand-off your content for review by a copy-writer
@@ -13,10 +13,14 @@ Decouple and Sync multi-language content between Sketch and Excel.
 
 - Backup your Sketch file (just in case)
 - Prefix your text layers and/or symbol layers that you want to include with '#'
-- Generate Excel file with all your content: Plugins -> Excel Translate -> Generate Content File...
-- Select the Content File: Plugins -> Excel Translate -> Select Content File...
+- Generate Excel file with all your content: Plugins -> Excel Content Sync -> Generate Content File...
+- Select the Content File: Plugins -> Excel Content Sync -> Select Content File...
 - Select your language
 - Wait till your Sketch file is updated.
+
+## Installation
+1. [Download the Zip](https://github.com/wousser/SketchExcelContentSync/archive/master.zip) and unzip the package
+2. Double click on `excelContentSync.sketchplugin` for auto installation
 
 ## How many language are supported
 - As many as you want. Each columnn in your Excel file can be chosen as a language source.

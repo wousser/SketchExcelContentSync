@@ -1,0 +1,61 @@
+{
+  "name": "Excel Content Sync",
+  "description": "Decouple and Sync multi-language content between Excel and Sketch",
+  "author": "Wouter Bron",
+  "homepage": "https://github.com/wousser/SketchExcelContentSync",
+  "compatibleVersion": 3,
+  "bundleVersion": 1,
+  "icon": "icon.png",
+  "commands": [
+    {
+      "name": "Select Content File...",
+      "description": "Select the Excel or CSV file that contains the content.",
+      "identifier": "select-content-file",
+      "script": "sync-page.js",
+      "handler": "selectContentFile"
+    },
+    {
+      "name": "Sync Current Page...",
+      "description": "Sync content from Excel file to this page.",
+      "identifier": "sync-current-page",
+      "script": "sync-page.js",
+      "handler": "syncCurrentPage"
+    },
+    {
+      "name": "Sync All Pages...",
+      "description": "Sync content from Excel file to all pages (except Symbols).",
+      "identifier": "sync-all-pages",
+      "script": "sync-page.js",
+      "handler": "syncAllPages"
+    },
+    {
+      "name": "Generate Content File...",
+      "description": "Generate Excel file with keys and values from the current Sketch document.",
+      "identifier": "generate-content-file",
+      "script": "generate-content-file.js"
+    },
+    {
+      "name": "Report Issue or Feedback",
+      "description": "Report Issue, Feedback or Feature on Github.",
+      "identifier": "open-feedback",
+      "script": "open-url.js",
+      "handler": "openFeedback"
+    }
+  ],
+  "menu": {
+    "title": "Excel Content Sync",
+    "items": [
+      "sync-current-page",
+      "sync-all-pages",
+      "-",
+      "select-content-file",
+      "generate-content-file",
+      "-",
+      "open-feedback"
+    ]
+  },
+  "version": "0.1.1-3",
+  "identifier": "Excel Content Sync",
+  "disableCocoaScriptPreprocessor": true,
+  "appcast": "https://raw.githubusercontent.com/wousser/SketchExcelContentSync/master/.appcast.xml"
+}
