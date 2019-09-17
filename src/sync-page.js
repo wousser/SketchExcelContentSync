@@ -106,7 +106,6 @@ function contentDocumentExists () {
 }
 
 function showLanguageSelectionPopup (languageOptions) {
-
   let contentFile = Settings.documentSettingForKey(document, 'excelTranslateContentFile')
   let contentFileName = path.basename(contentFile)
   UI.getInputFromUser(
@@ -234,31 +233,39 @@ function onComplete () {
 function updateTextLayer (layer) {
   console.log('updateTextLayer')
 
-  let artboardAndLayerName = constants.artboardPrefix + layer.getParentArtboard().name + '.' + layer.name
-  console.log(artboardAndLayerName)
-  if (contentDictionary[artboardAndLayerName]) {
-    layer.text = contentDictionary[artboardAndLayerName]
-    console.log('new value', layer.name, artboardAndLayerName, layer.text)
+  // Check for layers outside artboard
+  if (layer.getParentArtboard() === undefined) {
+    console.log('getParentArtboard() undefined')
+  } else {
+    let artboardAndLayerName = constants.artboardPrefix + layer.getParentArtboard().name + '.' + layer.name
+    console.log(artboardAndLayerName)
+    if (contentDictionary[artboardAndLayerName]) {
+      layer.text = contentDictionary[artboardAndLayerName]
+      console.log('new value', layer.name, artboardAndLayerName, layer.text)
+    }
+    console.log('updateTextLayer done')
   }
-  console.log('updateTextLayer done')
 }
 
 function updateSymbolLayer (symbol) {
   console.log('updateSymbolLayer')
+  if (symbol.getParentArtboard() === undefined) {
+    console.log('getParentArtboard() undefined')
+  } else {
+    let artboardAndSymbolName = constants.artboardPrefix + symbol.getParentArtboard().name + '.' + symbol.name
+    console.log(artboardAndSymbolName)
 
-  let artboardAndSymbolName = constants.artboardPrefix + symbol.getParentArtboard().name + '.' + symbol.name
-  console.log(artboardAndSymbolName)
+    for (let override of symbol.overrides) {
+      if (override.property === 'stringValue') {
+        let layerNameAndOverride = artboardAndSymbolName + constants.excelDivider + layerNamesFromPath(override.path)
 
-  for (let override of symbol.overrides) {
-    if (override.property === 'stringValue') {
-      let layerNameAndOverride = artboardAndSymbolName + constants.excelDivider + layerNamesFromPath(override.path)
-
-      if (contentDictionary[layerNameAndOverride]) {
-        override.value = contentDictionary[layerNameAndOverride]
+        if (contentDictionary[layerNameAndOverride]) {
+          override.value = contentDictionary[layerNameAndOverride]
+        }
       }
     }
+    console.log('updateSymbolLayer done')
   }
-  console.log('updateSymbolLayer done')
 }
 
 // **********************
