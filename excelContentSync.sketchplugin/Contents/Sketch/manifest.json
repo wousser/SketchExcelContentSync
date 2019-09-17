@@ -54,7 +54,7 @@
       "open-feedback"
     ]
   },
-  "version": "0.1.1-4",
+  "version": "0.2.0",
   "identifier": "Excel Content Sync",
   "disableCocoaScriptPreprocessor": true,
   "appcast": "https://raw.githubusercontent.com/wousser/SketchExcelContentSync/master/.appcast.xml"
