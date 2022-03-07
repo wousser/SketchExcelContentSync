@@ -1,6 +1,6 @@
 {
   "name": "excel-content-sync",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "engines": {
     "sketch": ">=3.0"
   },
@@ -24,13 +24,16 @@
   },
   "devDependencies": {
     "@skpm/builder": "^0.8.0",
+    "@skpm/extract-loader": "^2.0.2",
+    "css-loader": "^3.2.0",
     "eslint": "^8.10.0",
     "eslint-config-google": "^0.14.0",
     "eslint-config-sketch": "^0.2.4",
     "eslint-plugin-import": "^2.25.4",
     "eslint-plugin-node": "^11.1.0",
     "eslint-plugin-promise": "^6.0.0",
-    "eslint-plugin-standard": "^5.0.0"
+    "eslint-plugin-standard": "^5.0.0",
+    "html-loader": "^0.5.5"
   },
   "author": "Wouter Bron <wousser@gmail.com>",
   "dependencies": {
@@ -38,6 +41,9 @@
     "@skpm/fs": "^0.2.6",
     "csvtojson": "^2.0.10",
     "sketch-module-web-view": "^3.5.1",
-    "xlsx": "^0.18.3"
-  }
+    "xlsx": "^0.17.5"
+  },
+  "resources": [
+    "resources/**/*.js"
+  ]
 }
