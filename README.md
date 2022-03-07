@@ -24,7 +24,7 @@ Decouple and Sync multi-language content between Sketch and Excel.
 
 ## Compatibility
 
-The plugin is compatible with the latest version of Sketch 55.2 🎉 (And previous versions).
+The plugin is compatible with the latest version of Sketch 84 🎉 (And previous versions).
 
 ## How many languages are supported
 - As many as you need. Each columnn in your Excel file can be chosen as a language source.
