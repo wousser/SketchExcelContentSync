@@ -11,34 +11,34 @@
       "name": "Select Content File...",
       "description": "Select the Excel or CSV file that contains the content.",
       "identifier": "select-content-file",
-      "script": "sync-page.js",
+      "script": "__sync-page.js",
       "handler": "selectContentFile"
     },
     {
       "name": "Sync Current Page...",
       "description": "Sync content from Excel file to this page.",
       "identifier": "sync-current-page",
-      "script": "sync-page.js",
+      "script": "__sync-page.js",
       "handler": "syncCurrentPage"
     },
     {
       "name": "Sync All Pages...",
       "description": "Sync content from Excel file to all pages (except Symbols).",
       "identifier": "sync-all-pages",
-      "script": "sync-page.js",
+      "script": "__sync-page.js",
       "handler": "syncAllPages"
     },
     {
       "name": "Generate Content File...",
       "description": "Generate Excel file with keys and values from the current Sketch document.",
       "identifier": "generate-content-file",
-      "script": "generate-content-file.js"
+      "script": "__generate-content-file.js"
     },
     {
       "name": "Report Issue or Feedback",
       "description": "Report Issue, Feedback or Feature on Github.",
       "identifier": "open-feedback",
-      "script": "open-url.js",
+      "script": "__open-url.js",
       "handler": "openFeedback"
     }
   ],
@@ -54,7 +54,7 @@
       "open-feedback"
     ]
   },
-  "version": "0.2.0",
+  "version": "0.3.0",
   "identifier": "Excel Content Sync",
   "disableCocoaScriptPreprocessor": true,
   "appcast": "https://raw.githubusercontent.com/wousser/SketchExcelContentSync/master/.appcast.xml"

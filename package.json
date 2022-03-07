@@ -23,22 +23,21 @@
     "postinstall": "npm run build && skpm-link"
   },
   "devDependencies": {
-    "@skpm/builder": "^0.7.0",
-    "eslint": "^5.16.0",
-    "eslint-config-google": "^0.13.0",
+    "@skpm/builder": "^0.8.0",
+    "eslint": "^8.10.0",
+    "eslint-config-google": "^0.14.0",
     "eslint-config-sketch": "^0.2.4",
-    "eslint-config-standard": "^12.0.0",
-    "eslint-plugin-import": "^2.17.3",
-    "eslint-plugin-node": "^9.1.0",
-    "eslint-plugin-promise": "^4.1.1",
-    "eslint-plugin-standard": "^4.0.0"
+    "eslint-plugin-import": "^2.25.4",
+    "eslint-plugin-node": "^11.1.0",
+    "eslint-plugin-promise": "^6.0.0",
+    "eslint-plugin-standard": "^5.0.0"
   },
   "author": "Wouter Bron <wousser@gmail.com>",
   "dependencies": {
-    "@skpm/dialog": "^0.2.6",
-    "@skpm/fs": "^0.2.5",
-    "csvtojson": "^2.0.8",
-    "sketch-module-web-view": "^3.0.7",
-    "xlsx": "^0.14.3"
+    "@skpm/dialog": "^0.4.2",
+    "@skpm/fs": "^0.2.6",
+    "csvtojson": "^2.0.10",
+    "sketch-module-web-view": "^3.5.1",
+    "xlsx": "^0.18.3"
   }
 }
