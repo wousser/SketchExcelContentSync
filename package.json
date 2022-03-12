@@ -23,6 +23,7 @@
     "postinstall": "npm run build && skpm-link"
   },
   "devDependencies": {
+    "@skpm/babel-preset": "^0.2.3",
     "@skpm/builder": "^0.8.0",
     "@skpm/extract-loader": "^2.0.2",
     "css-loader": "^3.2.0",
@@ -40,6 +41,7 @@
     "@skpm/dialog": "^0.4.2",
     "@skpm/fs": "^0.2.6",
     "csvtojson": "^2.0.10",
+    "lodash": "^4.17.21",
     "sketch-module-web-view": "^3.5.1",
     "xlsx": "^0.17.5"
   },
