@@ -52148,9 +52148,9 @@ function generateContentForPage(page) {
   addToSheet(pageDivider, ""); // all artboards
 
   var artBoardLayers = sketch.find("Artboard", page);
-  console.log("ArtBoards: ", artBoardLayers.length);
 
-  if (artBoardLayers.length > 0) {
+  if (artBoardLayers) {
+    console.log("ArtBoards: ", artBoardLayers.length);
     artBoardLayers.forEach(function (artBoard) {
       var artBoardName = artBoard.name;
       console.log("ArtBoard: ", artBoardName); //add artBoard to excel
@@ -52161,9 +52161,9 @@ function generateContentForPage(page) {
       addToSheet(artboardDivider, ""); // Text
 
       var textLayers = sketch.find("Text", artBoard);
-      console.log("Text layers: ", textLayers.length);
 
-      if (textLayers.length > 0) {
+      if (textLayers) {
+        console.log("Text layers: ", textLayers.length);
         textLayers.forEach(function (textLayer) {
           console.log("Text layer: ", textLayer.name); //rename with #
 
@@ -52175,19 +52175,21 @@ function generateContentForPage(page) {
 
 
       var symbolLayers = sketch.find("SymbolInstance", artBoard);
-      console.log("Symbol layers: ", symbolLayers.length);
 
-      if (symbolLayers.length > 0) {
+      if (symbolLayers) {
+        console.log("Symbols: ", symbolLayers.length);
         symbolLayers.forEach(function (symbolLayer) {
-          console.log("Symbol layer: ", symbolLayer.name); //rename with #
+          console.log("Symbol: ", symbolLayer.name); //rename with #
 
           renameLayer(symbolLayer); //add to sheet buffer
 
           var textOverrides = extractTextOverrides(symbolLayer); // console.log("textOverrides", textOverrides);
 
-          textOverrides.forEach(function (textOverride) {
-            addToSheet(textOverride.fullPath, textOverride.value);
-          });
+          if (textOverrides) {
+            textOverrides.forEach(function (textOverride) {
+              addToSheet(textOverride.fullPath, textOverride.value);
+            });
+          }
         });
       }
     });
@@ -52205,12 +52207,13 @@ function renameLayer(layer) {
 
 function extractTextOverrides(symbol) {
   // console.log("extractTextOverrides");
-  if (symbol.overrides && symbol.overrides.length > 0) {
-    var symbolName = "".concat(symbol.name);
-    var result = [];
+  var symbolName = "".concat(symbol.name);
+  var result = [];
+
+  if (symbol.overrides) {
     symbol.overrides.forEach(function (override) {
       if (override.affectedLayer.type === sketch.Types.Text && override.property === "stringValue") {
-        console.log(symbol.name);
+        // console.log(symbol.name);
         var fullPath = "".concat(symbolName).concat(constants.excelDivider).concat(layerNamesFromPath(override.path, symbol)); // console.log("path", fullPath, override.value);
         // console.log(symbol);
 
@@ -52221,8 +52224,9 @@ function extractTextOverrides(symbol) {
         // addToSheet(fullPath, override.value);
       }
     });
-    return result;
   }
+
+  return result;
 }
 
 function addToSheet(key, value) {
@@ -52346,6 +52350,8 @@ function syncAllPages(context) {
   if (contentDocumentExists() && document.pages) {
     var contentFile = Settings.documentSettingForKey(document, "excelTranslateContentFile");
     loadData(contentFile);
+    var symbolsPage = Page.getSymbolsPage(document);
+    var symbolsPageName = symbolsPage ? symbolsPage.name : "Symbols";
 
     var _iterator2 = _createForOfIteratorHelper(document.pages),
         _step2;
@@ -52355,7 +52361,7 @@ function syncAllPages(context) {
         var page = _step2.value;
 
         // Don't add symbols page
-        if (page.name !== "Symbols") {
+        if (page.name !== symbolsPageName) {
           syncContentForPage(page);
         }
       }
@@ -52381,18 +52387,18 @@ function syncContentForPage(page) {
   console.log("Page:", pageName); // all artboards
 
   var artBoardLayers = sketch.find("Artboard", page);
-  console.log("ArtBoards:", artBoardLayers.length);
 
-  if (artBoardLayers.length > 0) {
+  if (artBoardLayers) {
+    console.log("ArtBoards:", artBoardLayers.length);
     artBoardLayers.forEach(function (artBoard) {
       var artBoardName = artBoard.name;
       console.log("ArtBoard:", artBoardName);
       UI.message("Syncing content:", page, artBoardName); // Text
 
       var textLayers = sketch.find("Text", artBoard);
-      console.log("Text layers:", textLayers.length);
 
-      if (textLayers.length > 0) {
+      if (textLayers) {
+        console.log("Text layers:", textLayers.length);
         textLayers.forEach(function (textLayer, index) {
           //sync content
           console.log("textLayer:", textLayer.name);
@@ -52417,38 +52423,40 @@ function syncContentForPage(page) {
 
 
       var symbolLayers = sketch.find("SymbolInstance", artBoard);
-      console.log("Symbols:", symbolLayers.length);
 
-      if (symbolLayers.length > 0) {
+      if (symbolLayers) {
+        console.log("Symbols:", symbolLayers.length);
         symbolLayers.forEach(function (symbolLayer, index) {
           console.log("Symbol:", symbolLayer.name);
           UI.message("Syncing content:", page, artBoardName, "".concat(index + 1, "/").concat(symbolLayers.length)); //for each override
 
-          symbolLayer.overrides.forEach(function (override) {
-            if (override.affectedLayer.type === sketch.Types.Text && override.property === "stringValue") {
-              var textLayerPath = layerNamesFromPath(override.path, symbolLayer); // console.log("textLayerPath", textLayerPath);
-              //2 find Sketch Content
+          if (symbolLayer.overrides) {
+            symbolLayer.overrides.forEach(function (override) {
+              if (override.affectedLayer.type === sketch.Types.Text && override.property === "stringValue") {
+                var textLayerPath = layerNamesFromPath(override.path, symbolLayer); // console.log("textLayerPath", textLayerPath);
+                //2 find Sketch Content
 
-              var key = symbolLayer.name + constants.excelDivider + textLayerPath; // console.log("finding", pageName, artBoardName, key);
+                var key = symbolLayer.name + constants.excelDivider + textLayerPath; // console.log("finding", pageName, artBoardName, key);
 
-              var result = _.find(contentDictionary, {
-                page: pageName,
-                artboard: artBoardName,
-                key: key
-              }); // console.log("result", result);
-              //3 replace text
-
-
-              if (result) {
-                override.value = result.value;
-              } else {
-                console.log("Skipped symbol: ", symbolLayer.name, textLayerPath);
-              } //4 auto layout
+                var result = _.find(contentDictionary, {
+                  page: pageName,
+                  artboard: artBoardName,
+                  key: key
+                }); // console.log("result", result);
+                //3 replace text
 
 
-              symbolLayer.resizeWithSmartLayout();
-            }
-          });
+                if (result) {
+                  override.value = result.value;
+                } else {
+                  console.log("Skipped symbol: ", symbolLayer.name, textLayerPath);
+                } //4 auto layout
+
+
+                symbolLayer.resizeWithSmartLayout();
+              }
+            });
+          }
         });
       }
     });
@@ -52471,7 +52479,7 @@ function selectContentFile(context) {
   });
   console.log("filePaths", filePaths, filePaths[0], filePaths.length);
 
-  if (filePaths.length) {
+  if (filePaths) {
     var contentFile = filePaths[0];
     console.log("set contentFile: ", contentFile); // set as document key
 
@@ -52549,7 +52557,13 @@ function loadExcelData(contentFile) {
   }
 
   console.log(keyAndLanguageOptions);
-  languageOptions = _.without(keyAndLanguageOptions, "__EMPTY", "key");
+  languageOptions = _.without(keyAndLanguageOptions, "key");
+  languageOptions = _.remove(languageOptions, function (languageOption) {
+    return !languageOption.includes("__EMPTY");
+  }); // languageOptions = languageOptions.filter(
+  //   ({ languageOption }) => !languageOption.includes("__EMPTY")
+  // );
+
   console.timeEnd("loadExcelData"); // ask for language first so we don't load all language data into the object.
 
   console.log("showLanguageSelectionPopup");
@@ -52561,18 +52575,20 @@ function loadExcelData(contentFile) {
   }, function (err, value) {
     if (err) {
       // most likely the user canceled the input
-      console.log(err);
+      console.log("user cancelled input");
+      console.log(err, value);
       return;
     }
 
     console.log("selected language", value);
     selectedLanguage = value; // languageOptions[selection[1]]
-  });
-  UI.alert("Syncing content", "Press OK to start syncing content\n\nDepending on the number of pages, artboards and content this might take a while...");
 
-  if (selectedLanguage) {
-    processData();
-  }
+    UI.alert("Syncing content", "Press OK to start syncing content\n\nDepending on the number of pages, artboards and content this might take a while...");
+
+    if (selectedLanguage) {
+      processData();
+    }
+  });
 }
 
 function processData() {
@@ -52586,27 +52602,31 @@ function processData() {
 
   var currentPage = "";
   var currentArboard = "";
-  excelJson.forEach(function (contentObject) {
-    // console.log("contentObject", contentObject);
-    // console.log("contentObject", contentObject.key);
-    if (contentObject.key.includes(constants.pagePrefix)) {
-      currentPage = contentObject.key.replace(constants.pagePrefix, "");
-    }
 
-    if (contentObject.key.includes(constants.artboardPrefix)) {
-      currentArboard = contentObject.key.replace(constants.artboardPrefix, "");
-    } // console.log("contentObject", contentObject.key);
+  if (excelJson) {
+    excelJson.forEach(function (contentObject) {
+      // console.log("contentObject", contentObject);
+      // console.log("contentObject", contentObject.key);
+      if (contentObject.key.includes(constants.pagePrefix)) {
+        currentPage = contentObject.key.replace(constants.pagePrefix, "");
+      }
+
+      if (contentObject.key.includes(constants.artboardPrefix)) {
+        currentArboard = contentObject.key.replace(constants.artboardPrefix, "");
+      } // console.log("contentObject", contentObject.key);
 
 
-    if (contentObject["".concat(selectedLanguage)]) {
-      contentDictionary.push({
-        page: currentPage,
-        artboard: currentArboard,
-        key: contentObject.key,
-        value: String(contentObject["".concat(selectedLanguage)])
-      });
-    }
-  });
+      if (contentObject["".concat(selectedLanguage)]) {
+        contentDictionary.push({
+          page: currentPage,
+          artboard: currentArboard,
+          key: contentObject.key,
+          value: String(contentObject["".concat(selectedLanguage)])
+        });
+      }
+    });
+  }
+
   console.log("contentDictionary");
   console.log(contentDictionary);
   console.timeEnd("processData");
@@ -52618,13 +52638,12 @@ function processData() {
 
 function layerNameFromLibrary(symbol, layerID) {
   // console.log("layerNameFromLibrary", symbol, layerID);
-  var nameFromLibary = null;
+  var nameFromLibary = null; // const symbolName = `${symbol.name}`;
 
-  if (symbol.overrides && symbol.overrides.length > 0) {
-    // const symbolName = `${symbol.name}`;
+  if (symbol.overrides) {
     symbol.overrides.forEach(function (override) {
       if (override.affectedLayer.id === layerID && (override.property === "stringValue" || override.property === "symbolID") && override.editable === true) {
-        console.log(symbol.name, override.affectedLayer.name);
+        // console.log(symbol.name, override.affectedLayer.name);
         nameFromLibary = override.affectedLayer.name;
       }
     });
