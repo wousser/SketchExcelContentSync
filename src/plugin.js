@@ -230,9 +230,13 @@ function saveToFile() {
     date.getMonth() + 1
   }-${date.getDate()} ${date.getHours()}-${date.getMinutes()}`;
 
-  let name = decodeURI(path.basename(document.path, ".sketch"));
-  let contentFileName = name + "-content-" + dateFormat + ".xlsx";
-  var defaultPath = path.join(path.dirname(document.path), contentFileName);
+  var defaultPath = "/";
+  if (document.path) {
+    let name = decodeURI(path.basename(document.path, ".sketch"));
+    let contentFileName = name + "-content-" + dateFormat + ".xlsx";
+    defaultPath = path.join(path.dirname(document.path), contentFileName);
+  }
+
   console.log(defaultPath);
   var filePath = dialog.showSaveDialogSync({
     filters: [{ name: "Excel", extensions: ["xlsx"] }],
@@ -298,9 +302,37 @@ export function syncCurrentPage(context) {
 
     loadData(contentFile);
 
-    syncContentForPage(document.selectedPage);
+    //ask language / column
+    let contentFileName = path.basename(contentFile);
+    UI.getInputFromUser(
+      `Select content column:\n\nContent file:\n${contentFileName}`,
+      {
+        type: UI.INPUT_TYPE.selection,
+        possibleValues: languageOptions,
+      },
+      (err, value) => {
+        if (err) {
+          // most likely the user canceled the input
+          console.log("user cancelled input");
+          console.log(err, value);
+          return;
+        }
+        console.log("selected language", value);
 
-    context.document.reloadInspector();
+        selectedLanguage = value; // languageOptions[selection[1]]
+        UI.alert(
+          "Syncing content",
+          "Press OK to start syncing content\n\nDepending on the number of pages, artboards and content this might take a while..."
+        );
+
+        if (selectedLanguage) {
+          syncContentForPage(document.selectedPage);
+
+          context.document.reloadInspector();
+        }
+      }
+    );
+    //ask language / column
   } else {
     console.log("Content file not found.");
     UI.message("Content file not found.");
@@ -316,18 +348,46 @@ export function syncAllPages(context) {
       document,
       "excelTranslateContentFile"
     );
+
     loadData(contentFile);
 
-    const symbolsPage = Page.getSymbolsPage(document);
-    const symbolsPageName = symbolsPage ? symbolsPage.name : "Symbols";
+    //ask language / column
+    let contentFileName = path.basename(contentFile);
+    UI.getInputFromUser(
+      `Select content column:\n\nContent file:\n${contentFileName}`,
+      {
+        type: UI.INPUT_TYPE.selection,
+        possibleValues: languageOptions,
+      },
+      (err, value) => {
+        if (err) {
+          // most likely the user canceled the input
+          console.log("user cancelled input");
+          console.log(err, value);
+          return;
+        }
+        console.log("selected language", value);
 
-    for (let page of document.pages) {
-      // Don't add symbols page
-      if (page.name !== symbolsPageName) {
-        syncContentForPage(page);
+        selectedLanguage = value; // languageOptions[selection[1]]
+        UI.alert(
+          "Syncing content",
+          "Press OK to start syncing content\n\nDepending on the number of pages, artboards and content this might take a while..."
+        );
+
+        if (selectedLanguage) {
+          const symbolsPage = Page.getSymbolsPage(document);
+          const symbolsPageName = symbolsPage ? symbolsPage.name : "Symbols";
+          for (let page of document.pages) {
+            // Don't add symbols page
+            if (page.name !== symbolsPageName) {
+              syncContentForPage(page);
+            }
+          }
+          context.document.reloadInspector();
+        }
       }
-    }
-    context.document.reloadInspector();
+    );
+    //ask language / column
   } else {
     console.log("Document contains no pages, or content file not found.");
     UI.message("Document contains no pages, or content file not found.");
@@ -380,7 +440,10 @@ function syncContentForPage(page) {
 
           //2 replace text
           if (result) {
-            textLayer.text = result.value;
+            const resultValue = result.content[`${selectedLanguage}`];
+            if (resultValue) {
+              textLayer.text = resultValue;
+            }
           } else {
             console.log("Skipped text layer:", textLayer.name);
           }
@@ -428,7 +491,10 @@ function syncContentForPage(page) {
 
                 //3 replace text
                 if (result) {
-                  override.value = result.value;
+                  const resultValue = result.content[`${selectedLanguage}`];
+                  if (resultValue) {
+                    override.value = resultValue;
+                  }
                 } else {
                   console.log(
                     "Skipped symbol: ",
@@ -566,46 +632,15 @@ function loadExcelData(contentFile) {
   console.timeEnd("loadExcelData");
 
   // ask for language first so we don't load all language data into the object.
-  console.log("showLanguageSelectionPopup");
-  console.log(languageOptions);
+  // console.log("showLanguageSelectionPopup");
+  // console.log(languageOptions);
 
-  let contentFileName = path.basename(contentFile);
-  UI.getInputFromUser(
-    `Select content column:\n\nContent file:\n${contentFileName}`,
-    {
-      type: UI.INPUT_TYPE.selection,
-      possibleValues: languageOptions,
-    },
-    (err, value) => {
-      if (err) {
-        // most likely the user canceled the input
-        console.log("user cancelled input");
-        console.log(err, value);
-        return;
-      }
-      console.log("selected language", value);
-
-      selectedLanguage = value; // languageOptions[selection[1]]
-      UI.alert(
-        "Syncing content",
-        "Press OK to start syncing content\n\nDepending on the number of pages, artboards and content this might take a while..."
-      );
-
-      if (selectedLanguage) {
-        processData();
-      }
-    }
-  );
+  processData();
 }
 
 function processData() {
   console.time("processData");
   console.log("processData");
-
-  if (!selectedLanguage) {
-    console.log("loadExcelData() aborted. No data columnn selected.");
-    return;
-  }
 
   var currentPage = "";
   var currentArboard = "";
@@ -624,15 +659,22 @@ function processData() {
         );
       }
 
+      //all content
+      var allContent = {};
+      languageOptions.forEach((languageOption) => {
+        if (contentObject[languageOption]) {
+          allContent[languageOption] = String(contentObject[languageOption]);
+        }
+      });
+
       // console.log("contentObject", contentObject.key);
-      if (contentObject[`${selectedLanguage}`]) {
-        contentDictionary.push({
-          page: currentPage,
-          artboard: currentArboard,
-          key: contentObject.key,
-          value: String(contentObject[`${selectedLanguage}`]),
-        });
-      }
+
+      contentDictionary.push({
+        page: currentPage,
+        artboard: currentArboard,
+        key: contentObject.key,
+        content: allContent,
+      });
     });
   }
 
