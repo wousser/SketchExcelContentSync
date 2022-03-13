@@ -358,8 +358,6 @@ function syncContentForPage(page) {
           } else {
             console.log("skipped text", textLayer.name);
           }
-
-          //3 auto layout TODO
         });
       }
 
@@ -407,7 +405,8 @@ function syncContentForPage(page) {
                 console.log("skipped symbol", textLayerPath);
               }
 
-              //4 auto layout?
+              //4 auto layout
+              symbolLayer.resizeWithSmartLayout();
             }
           });
         });

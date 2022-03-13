@@ -52399,8 +52399,7 @@ function syncContentForPage(page) {
             textLayer.text = result.value;
           } else {
             console.log("skipped text", textLayer.name);
-          } //3 auto layout TODO
-
+          }
         });
       } // Symbol
 
@@ -52433,8 +52432,10 @@ function syncContentForPage(page) {
                 override.value = result.value;
               } else {
                 console.log("skipped symbol", textLayerPath);
-              } //4 auto layout?
+              } //4 auto layout
 
+
+              symbolLayer.resizeWithSmartLayout();
             }
           });
         });
