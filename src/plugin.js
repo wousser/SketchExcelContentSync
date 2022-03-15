@@ -17,6 +17,7 @@ var contentDictionary = [];
 var languageOptions = [];
 var selectedLanguage;
 var contentLanguage = "en-US"; // set en-US as standard
+var contentFileType = "Excel";
 var renameTextLayersFlag = false;
 var generatedFileData = [];
 var duplicateKeys = 0;
@@ -36,7 +37,7 @@ export function generateContentFile() {
   console.log("generateContentFile");
   if (document.pages) {
     // ask for language
-    if (askContentLanguage() && askRenameTextLayers()) {
+    if (askContentLanguage() && askRenameTextLayers() && askFileType()) {
       UI.alert(
         "Creating content document",
         "Press OK to start creating content document\n\nDepending on the number of pages, artboards and content this might take a while..."
@@ -224,6 +225,31 @@ function askContentLanguage() {
   return returnValue;
 }
 
+function askFileType() {
+  var returnValue = false;
+  UI.getInputFromUser(
+    `Filetype: Save as Excel or CSV file?`,
+    {
+      type: UI.INPUT_TYPE.selection,
+      possibleValues: ["Excel", "CSV"],
+      initialValue: "Excel",
+    },
+    (err, value) => {
+      if (err) {
+        console.log("pressed cancel");
+        // most likely the user canceled the input
+        return;
+      }
+      if (value !== "null" && value.length > 1) {
+        contentFileType = value;
+        console.log("set contentFileType", contentFileType);
+        returnValue = true;
+      }
+    }
+  );
+  return returnValue;
+}
+
 function saveToFile() {
   var date = new Date();
   var dateFormat = `${date.getFullYear()}-${
@@ -233,30 +259,56 @@ function saveToFile() {
   var defaultPath = "/";
   if (document.path) {
     let name = decodeURI(path.basename(document.path, ".sketch"));
-    let contentFileName = name + "-content-" + dateFormat + ".xlsx";
-    defaultPath = path.join(path.dirname(document.path), contentFileName);
+    let contentFileName = name + "-content-" + dateFormat;
+    defaultPath = path.join(
+      path.dirname(document.path),
+      contentFileName
+      // + ".xlsx"
+    );
+    switch (contentFileType) {
+      case "Excel":
+        defaultPath += ".xslx";
+        break;
+      case "CSV":
+        defaultPath += ".csv";
+        break;
+    }
   }
 
   console.log(defaultPath);
   var filePath = dialog.showSaveDialogSync({
-    filters: [{ name: "Excel", extensions: ["xlsx"] }],
+    title: "Export as:",
+    message: "Export Sketch content as Excel or CSV file.",
+    filters: [
+      { name: "Excel", extensions: ["xlsx"] },
+      { name: "CSV", extensions: ["csv"] },
+    ],
     defaultPath: defaultPath,
   });
 
   try {
     // check if user want to save the file
     if (filePath) {
-      // console.log(generatedFileData)
+      console.log("filePath", filePath);
+      let fileType = path.extname(filePath);
+      console.log("fileType", fileType);
+
       let book = XLSX.utils.book_new();
       let sheet = XLSX.utils.json_to_sheet(generatedFileData);
       sheet["B1"].v = contentLanguage;
       XLSX.utils.book_append_sheet(book, sheet, "content");
+      var content;
+      switch (fileType.toLowerCase()) {
+        case ".csv":
+          console.log("fileType csv");
+          content = CSVFile(book);
+          break;
+        case (".xls", ".xlsx"):
+          console.log("fileType excel");
+          content = excelFile(book);
+          break;
+      }
 
-      let content = XLSX.write(book, {
-        type: "buffer",
-        bookType: "xlsx",
-        bookSST: false,
-      });
       fs.writeFileSync(filePath, content, { encoding: "binary" });
       console.log("File created as:", filePath);
 
@@ -284,6 +336,24 @@ function saveToFile() {
     console.log(error);
     UI.message("error");
   }
+}
+
+function excelFile(book) {
+  // console.log(generatedFileData)
+
+  return XLSX.write(book, {
+    type: "buffer",
+    bookType: "xlsx",
+    bookSST: false,
+  });
+}
+
+function CSVFile(book) {
+  return XLSX.write(book, {
+    type: "buffer",
+    bookType: "csv",
+    bookSST: false,
+  });
 }
 
 //
@@ -556,8 +626,7 @@ function loadData(contentFile) {
   switch (fileType.toLowerCase()) {
     case ".csv":
       console.log("csv");
-      // TODO: Support csv files
-      // loadCSVData(contentFile)
+      loadExcelData(contentFile);
       break;
     // eslint-disable-next-line no-sequences
     case (".xls", ".xlsx"):

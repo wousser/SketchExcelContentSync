@@ -52084,6 +52084,7 @@ var languageOptions = [];
 var selectedLanguage;
 var contentLanguage = "en-US"; // set en-US as standard
 
+var contentFileType = "Excel";
 var renameTextLayersFlag = false;
 var generatedFileData = [];
 var duplicateKeys = 0;
@@ -52104,7 +52105,7 @@ function generateContentFile() {
 
   if (document.pages) {
     // ask for language
-    if (askContentLanguage() && askRenameTextLayers()) {
+    if (askContentLanguage() && askRenameTextLayers() && askFileType()) {
       UI.alert("Creating content document", "Press OK to start creating content document\n\nDepending on the number of pages, artboards and content this might take a while...");
       var symbolsPage = Page.getSymbolsPage(document);
       var symbolsPageName = symbolsPage ? symbolsPage.name : "Symbols";
@@ -52281,6 +52282,28 @@ function askContentLanguage() {
   return returnValue;
 }
 
+function askFileType() {
+  var returnValue = false;
+  UI.getInputFromUser("Filetype: Save as Excel or CSV file?", {
+    type: UI.INPUT_TYPE.selection,
+    possibleValues: ["Excel", "CSV"],
+    initialValue: "Excel"
+  }, function (err, value) {
+    if (err) {
+      console.log("pressed cancel"); // most likely the user canceled the input
+
+      return;
+    }
+
+    if (value !== "null" && value.length > 1) {
+      contentFileType = value;
+      console.log("set contentFileType", contentFileType);
+      returnValue = true;
+    }
+  });
+  return returnValue;
+}
+
 function saveToFile() {
   var date = new Date();
   var dateFormat = "".concat(date.getFullYear(), "-").concat(date.getMonth() + 1, "-").concat(date.getDate(), " ").concat(date.getHours(), "-").concat(date.getMinutes());
@@ -52288,15 +52311,31 @@ function saveToFile() {
 
   if (document.path) {
     var name = decodeURI(path.basename(document.path, ".sketch"));
-    var contentFileName = name + "-content-" + dateFormat + ".xlsx";
-    defaultPath = path.join(path.dirname(document.path), contentFileName);
+    var contentFileName = name + "-content-" + dateFormat;
+    defaultPath = path.join(path.dirname(document.path), contentFileName // + ".xlsx"
+    );
+
+    switch (contentFileType) {
+      case "Excel":
+        defaultPath += ".xslx";
+        break;
+
+      case "CSV":
+        defaultPath += ".csv";
+        break;
+    }
   }
 
   console.log(defaultPath);
   var filePath = _skpm_dialog__WEBPACK_IMPORTED_MODULE_3___default.a.showSaveDialogSync({
+    title: "Export as:",
+    message: "Export Sketch content as Excel or CSV file.",
     filters: [{
       name: "Excel",
       extensions: ["xlsx"]
+    }, {
+      name: "CSV",
+      extensions: ["csv"]
     }],
     defaultPath: defaultPath
   });
@@ -52304,16 +52343,27 @@ function saveToFile() {
   try {
     // check if user want to save the file
     if (filePath) {
-      // console.log(generatedFileData)
+      console.log("filePath", filePath);
+      var fileType = path.extname(filePath);
+      console.log("fileType", fileType);
       var book = XLSX.utils.book_new();
       var sheet = XLSX.utils.json_to_sheet(generatedFileData);
       sheet["B1"].v = contentLanguage;
       XLSX.utils.book_append_sheet(book, sheet, "content");
-      var content = XLSX.write(book, {
-        type: "buffer",
-        bookType: "xlsx",
-        bookSST: false
-      });
+      var content;
+
+      switch (fileType.toLowerCase()) {
+        case ".csv":
+          console.log("fileType csv");
+          content = CSVFile(book);
+          break;
+
+        case (".xls", ".xlsx"):
+          console.log("fileType excel");
+          content = excelFile(book);
+          break;
+      }
+
       _skpm_fs__WEBPACK_IMPORTED_MODULE_2___default.a.writeFileSync(filePath, content, {
         encoding: "binary"
       });
@@ -52327,6 +52377,23 @@ function saveToFile() {
     console.log(error);
     UI.message("error");
   }
+}
+
+function excelFile(book) {
+  // console.log(generatedFileData)
+  return XLSX.write(book, {
+    type: "buffer",
+    bookType: "xlsx",
+    bookSST: false
+  });
+}
+
+function CSVFile(book) {
+  return XLSX.write(book, {
+    type: "buffer",
+    bookType: "csv",
+    bookSST: false
+  });
 } //
 // Sync page
 //
@@ -52552,9 +52619,8 @@ function loadData(contentFile) {
 
   switch (fileType.toLowerCase()) {
     case ".csv":
-      console.log("csv"); // TODO: Support csv files
-      // loadCSVData(contentFile)
-
+      console.log("csv");
+      loadExcelData(contentFile);
       break;
     // eslint-disable-next-line no-sequences
 
