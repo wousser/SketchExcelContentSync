@@ -52014,17 +52014,19 @@ var XLS = XLSX, ODS = XLSX;
 
 var excelDivider = " / ";
 var sketchSymbolDivider = "/";
-var pagePrefix = " ###";
-var artboardPrefix = "##";
-var noArtboardPrefix = "NOARTBOARD";
+var pagePrefix = " P#";
+var artboardPrefix = "A#";
+var noArtboardPrefix = "N#";
 var translateLayerPrefix = "#";
+var LayerIdPrefix = "+";
 module.exports = {
   excelDivider: excelDivider,
   sketchSymbolDivider: sketchSymbolDivider,
   pagePrefix: pagePrefix,
   artboardPrefix: artboardPrefix,
   noArtboardPrefix: noArtboardPrefix,
-  translateLayerPrefix: translateLayerPrefix
+  translateLayerPrefix: translateLayerPrefix,
+  LayerIdPrefix: LayerIdPrefix
 };
 
 /***/ }),
@@ -52087,6 +52089,7 @@ var contentLanguage = "en-US"; // set en-US as standard
 var contentFileType = "Excel";
 var renameTextLayersFlag = false;
 var generatedFileData = [];
+var duplicateData = [];
 var duplicateKeys = 0;
 var excelJson;
 
@@ -52137,6 +52140,8 @@ function generateContentFile() {
   }
 }
 
+function getGroupPath(layer) {}
+
 function generateContentForPage(page) {
   console.time("generateContent");
   console.log("page: ", page.name); //add page to excel
@@ -52166,11 +52171,30 @@ function generateContentForPage(page) {
       if (textLayers) {
         console.log("Text layers: ", textLayers.length);
         textLayers.forEach(function (textLayer) {
-          console.log("Text layer: ", textLayer.name); //rename with #
+          console.log("Text layer: ", textLayer.name);
+          console.log(textLayer);
 
-          renameLayer(textLayer); //add to sheet buffer
+          if (textLayer.parent) {
+            console.log("Group:", textLayer.parent.name);
+          } //duplicateCheck
 
-          addToSheet(textLayer.name, textLayer.text);
+
+          var isDuplicate = duplicateData.includes(textLayer.name);
+          console.log("isDuplicate:", isDuplicate, textLayer.name, duplicateData);
+
+          if (isDuplicate) {
+            //add ID to layer name
+            addToSheet(textLayer.name + constants.LayerIdPrefix + textLayer.id, textLayer.text);
+            duplicateData.push(textLayer.name + constants.LayerIdPrefix + textLayer.id);
+            duplicateKeys += 1;
+          } else {
+            //add to sheet buffer
+            addToSheet(textLayer.name, textLayer.text);
+            duplicateData.push(textLayer.name);
+          } //rename with #
+
+
+          renameLayer(textLayer, isDuplicate);
         });
       } // Symbol
 
@@ -52199,10 +52223,19 @@ function generateContentForPage(page) {
   console.timeEnd("generateContent");
 }
 
-function renameLayer(layer) {
-  if (renameTextLayersFlag && layer.name.charAt(0) !== "#") {
-    layer.name = constants.translateLayerPrefix + layer.name;
+function renameLayer(layer, isDuplicate) {
+  if (renameTextLayersFlag) {
+    if (isDuplicate) {
+      layer.name = layer.name + constants.LayerIdPrefix + layer.id;
+    }
+
+    if (layer.name.charAt(0) !== constants.translateLayerPrefix) {
+      layer.name = constants.translateLayerPrefix + layer.name;
+    }
+
     console.log("layer renamed", layer.name);
+  } else {
+    console.log("Rename Layers disabled");
   }
 }
 
@@ -52221,8 +52254,7 @@ function extractTextOverrides(symbol) {
         result.push({
           fullPath: fullPath,
           value: override.value
-        }); // return { fullPath: fullPath, value: override.value };
-        // addToSheet(fullPath, override.value);
+        });
       }
     });
   }
@@ -52231,18 +52263,14 @@ function extractTextOverrides(symbol) {
 }
 
 function addToSheet(key, value) {
-  // TODO: Add checkbox to skip duplicate keys
-  if (false) {} else {
-    // add to array
-    var keyValue = new ExcelContent(key, value);
-    generatedFileData.push(keyValue);
-  } // console.log('Adding to sheet: ' + key, value)
-
+  // add to array
+  var keyValue = new ExcelContent(key, value);
+  generatedFileData.push(keyValue);
 }
 
 function askRenameTextLayers() {
   var returnValue = false;
-  UI.getInputFromUser("Prefix text and symbol layers with '".concat(constants.translateLayerPrefix, "'?"), {
+  UI.getInputFromUser("Prefix text and symbol layers with '".concat(constants.translateLayerPrefix, "', and rename duplicates?"), {
     type: UI.INPUT_TYPE.selection,
     possibleValues: ["yes", "no"],
     initialValue: "yes"
@@ -52513,11 +52541,13 @@ function syncContentForPage(page) {
 
       if (textLayers) {
         console.log("Text layers:", textLayers.length);
+        console.log(contentDictionary);
         textLayers.forEach(function (textLayer, index) {
           //sync content
           console.log("textLayer:", textLayer.name);
           UI.message("Syncing content:", page, artBoardName, "".concat(index + 1, "/").concat(textLayers.length)); //1 find Sketch Content
-          // console.log("finding", pageName, artBoardName, textLayer.name);
+
+          console.log("finding", pageName, artBoardName, textLayer.name);
 
           var result = _.find(contentDictionary, {
             page: pageName,

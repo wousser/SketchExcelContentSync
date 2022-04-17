@@ -20,6 +20,7 @@ var contentLanguage = "en-US"; // set en-US as standard
 var contentFileType = "Excel";
 var renameTextLayersFlag = false;
 var generatedFileData = [];
+var duplicateData = [];
 var duplicateKeys = 0;
 var excelJson;
 
@@ -62,6 +63,8 @@ export function generateContentFile() {
   }
 }
 
+function getGroupPath(layer) {}
+
 function generateContentForPage(page) {
   console.time("generateContent");
   console.log("page: ", page.name);
@@ -93,11 +96,38 @@ function generateContentForPage(page) {
         console.log("Text layers: ", textLayers.length);
         textLayers.forEach((textLayer) => {
           console.log("Text layer: ", textLayer.name);
-          //rename with #
-          renameLayer(textLayer);
+          console.log(textLayer);
+          if (textLayer.parent) {
+            console.log("Group:", textLayer.parent.name);
+          }
 
-          //add to sheet buffer
-          addToSheet(textLayer.name, textLayer.text);
+          //duplicateCheck
+          let isDuplicate = duplicateData.includes(textLayer.name);
+          console.log(
+            "isDuplicate:",
+            isDuplicate,
+            textLayer.name,
+            duplicateData
+          );
+
+          if (isDuplicate) {
+            //add ID to layer name
+            addToSheet(
+              textLayer.name + constants.LayerIdPrefix + textLayer.id,
+              textLayer.text
+            );
+            duplicateData.push(
+              textLayer.name + constants.LayerIdPrefix + textLayer.id
+            );
+            duplicateKeys += 1;
+          } else {
+            //add to sheet buffer
+            addToSheet(textLayer.name, textLayer.text);
+            duplicateData.push(textLayer.name);
+          }
+
+          //rename with #
+          renameLayer(textLayer, isDuplicate);
         });
       }
 
@@ -126,10 +156,19 @@ function generateContentForPage(page) {
   console.timeEnd("generateContent");
 }
 
-function renameLayer(layer) {
-  if (renameTextLayersFlag && layer.name.charAt(0) !== "#") {
-    layer.name = constants.translateLayerPrefix + layer.name;
+function renameLayer(layer, isDuplicate) {
+  if (renameTextLayersFlag) {
+    if (isDuplicate) {
+      layer.name = layer.name + constants.LayerIdPrefix + layer.id;
+    }
+
+    if (layer.name.charAt(0) !== constants.translateLayerPrefix) {
+      layer.name = constants.translateLayerPrefix + layer.name;
+    }
+
     console.log("layer renamed", layer.name);
+  } else {
+    console.log("Rename Layers disabled");
   }
 }
 
@@ -155,8 +194,6 @@ function extractTextOverrides(symbol) {
           fullPath: fullPath,
           value: override.value,
         });
-        // return { fullPath: fullPath, value: override.value };
-        // addToSheet(fullPath, override.value);
       }
     });
   }
@@ -165,22 +202,15 @@ function extractTextOverrides(symbol) {
 }
 
 function addToSheet(key, value) {
-  // TODO: Add checkbox to skip duplicate keys
-  if (false) {
-    // skip
-    duplicateKeys += 1;
-  } else {
-    // add to array
-    let keyValue = new ExcelContent(key, value);
-    generatedFileData.push(keyValue);
-  }
-  // console.log('Adding to sheet: ' + key, value)
+  // add to array
+  let keyValue = new ExcelContent(key, value);
+  generatedFileData.push(keyValue);
 }
 
 function askRenameTextLayers() {
   var returnValue = false;
   UI.getInputFromUser(
-    `Prefix text and symbol layers with '${constants.translateLayerPrefix}'?`,
+    `Prefix text and symbol layers with '${constants.translateLayerPrefix}', and rename duplicates?`,
     {
       type: UI.INPUT_TYPE.selection,
       possibleValues: ["yes", "no"],
@@ -488,6 +518,9 @@ function syncContentForPage(page) {
 
       if (textLayers) {
         console.log("Text layers:", textLayers.length);
+
+        console.log(contentDictionary);
+
         textLayers.forEach((textLayer, index) => {
           //sync content
           console.log("textLayer:", textLayer.name);
@@ -499,7 +532,7 @@ function syncContentForPage(page) {
           );
 
           //1 find Sketch Content
-          // console.log("finding", pageName, artBoardName, textLayer.name);
+          console.log("finding", pageName, artBoardName, textLayer.name);
 
           let result = _.find(contentDictionary, {
             page: pageName,

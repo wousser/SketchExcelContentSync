@@ -1,9 +1,10 @@
 const excelDivider = " / ";
 const sketchSymbolDivider = "/";
-const pagePrefix = " ###";
-const artboardPrefix = "##";
-const noArtboardPrefix = "NOARTBOARD";
+const pagePrefix = " P#";
+const artboardPrefix = "A#";
+const noArtboardPrefix = "N#";
 const translateLayerPrefix = "#";
+const LayerIdPrefix = "+";
 
 module.exports = {
   excelDivider,
@@ -12,4 +13,5 @@ module.exports = {
   artboardPrefix,
   noArtboardPrefix,
   translateLayerPrefix,
+  LayerIdPrefix,
 };
